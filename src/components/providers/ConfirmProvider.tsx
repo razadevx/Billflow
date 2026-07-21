@@ -63,7 +63,7 @@ export const ConfirmProvider = ({ children }: { children: ReactNode }) => {
                 {options.cancelText || "Cancel"}
               </Button>
               <Button 
-                variant={options.variant === "destructive" ? "destructive" : "default"} 
+                variant={options.variant === "destructive" ? "danger" : "default"} 
                 onClick={handleConfirm}
               >
                 {options.confirmText || "Confirm"}

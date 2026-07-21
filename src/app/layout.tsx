@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "../components/providers/ThemeProvider";
-import { ToastProvider } from "../components/providers/ToastProvider";
-import { ConfirmProvider } from "../components/providers/ConfirmProvider";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { ToastProvider } from "@/components/providers/ToastProvider";
+import { ConfirmProvider } from "@/components/providers/ConfirmProvider";
+import { QueryProvider } from "@/components/providers/QueryProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,7 +28,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ConfirmProvider>
-            {children}
+            <QueryProvider>
+              {children}
+            </QueryProvider>
             <ToastProvider />
           </ConfirmProvider>
         </ThemeProvider>

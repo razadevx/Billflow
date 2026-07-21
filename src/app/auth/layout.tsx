@@ -1,5 +1,5 @@
 import React from "react";
-import { Icons } from "../../components/ui/icons";
+import { Icons } from "@/components/ui/icons";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (

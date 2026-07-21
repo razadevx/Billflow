@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { InvitationService } from "../../../../server/services/InvitationService";
-import { getRequestContext } from "../../../../server/core/context";
-import { successResponse, errorResponse } from "../../../../server/api/response";
+import { InvitationService } from "@/server/services/InvitationService";
+import { getRequestContext } from "@/server/core/context";
+import { successResponse, errorResponse } from "@/server/api/response";
 
 export async function POST(req: NextRequest) {
   try {

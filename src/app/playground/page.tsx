@@ -1,11 +1,11 @@
 "use client";
 
 import React from "react";
-import { Button } from "../../components/ui/button";
-import { useConfirm } from "../../components/providers/ConfirmProvider";
+import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/providers/ConfirmProvider";
 import { toast } from "sonner";
-import { Icons } from "../../components/ui/icons";
-import { AppLayout } from "../../components/layout/AppLayout";
+import { Icons } from "@/components/ui/icons";
+import { AppLayout } from "@/components/layout/AppLayout";
 
 export default function PlaygroundPage() {
   const confirm = useConfirm();
@@ -30,7 +30,7 @@ export default function PlaygroundPage() {
   };
 
   return (
-    <AppLayout>
+    
       <div className="max-w-[var(--container-wide)] mx-auto space-y-12">
         <div>
           <h1 className="text-[length:var(--text-heading-xl)] font-bold tracking-tight mb-2">BDS Playground</h1>
@@ -82,7 +82,8 @@ export default function PlaygroundPage() {
           </div>
         </section>
       </div>
-    </AppLayout>
+    
   );
 }
+
 

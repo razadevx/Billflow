@@ -31,6 +31,7 @@ export class WorkOrderRepository extends BaseRepository<WorkOrder, Prisma.WorkOr
         attachments: true,
         customer: true,
         scheduleEntries: true,
+        invoices: true,
       },
     });
   }

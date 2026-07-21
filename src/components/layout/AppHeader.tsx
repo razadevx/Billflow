@@ -39,7 +39,7 @@ export function AppHeader() {
   };
 
   return (
-    <header className="h-14 bg-background border-b border-border flex items-center justify-between px-6 flex-shrink-0">
+    <header className="print:hidden h-14 bg-background border-b border-border flex items-center justify-between px-6 flex-shrink-0">
       <div className="flex items-center">
         {/* Breadcrumbs */}
         <div className="flex items-center text-sm text-muted-foreground capitalize">
@@ -110,3 +110,4 @@ export function AppHeader() {
     </header>
   );
 }
+

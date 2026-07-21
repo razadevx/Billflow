@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button } from "../../../components/ui/button";
-import { Icons } from "../../../components/ui/icons";
+import { Button } from "@/components/ui/button";
+import { Icons } from "@/components/ui/icons";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { CreateCustomerInput } from "@/domain/customer/validation/CustomerValidation";

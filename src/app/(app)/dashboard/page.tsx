@@ -38,7 +38,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <AppLayout>
+      
         <DashboardContainer className="py-8 space-y-8 animate-pulse">
           <div className="h-10 w-48 bg-muted rounded"></div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -46,12 +46,12 @@ export default function DashboardPage() {
           </div>
           <div className="h-64 bg-muted rounded-xl"></div>
         </DashboardContainer>
-      </AppLayout>
+      
     );
   }
 
   return (
-    <AppLayout>
+    
       <DashboardContainer className="py-8 animate-fade-in">
         <PageHeader 
           title="Dashboard" 
@@ -217,6 +217,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </DashboardContainer>
-    </AppLayout>
+    
   );
 }
+

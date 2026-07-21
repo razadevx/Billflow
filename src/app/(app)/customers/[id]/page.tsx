@@ -1,14 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AppLayout } from "../../../components/layout/AppLayout";
-import { Icons } from "../../../components/ui/icons";
-import { Button } from "../../../components/ui/button";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Icons } from "@/components/ui/icons";
+import { Button } from "@/components/ui/button";
 
 // Future components
 import { CustomerOverview } from "./components/CustomerOverview";
 import { CustomerActivity } from "./components/CustomerActivity";
 import { CustomerOrders } from "./components/CustomerOrders";
+import { CustomerStatements } from "./components/CustomerStatements";
 
 export default function CustomerProfilePage({ params }: { params: { id: string } }) {
   const [customer, setCustomer] = useState<any>(null);
@@ -32,33 +33,33 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
     { id: "orders", label: "Orders" },
     { id: "payments", label: "Payments" },
     { id: "ledger", label: "Ledger" },
-    { id: "documents", label: "Documents" },
+    { id: "statements", label: "Statements" },
     { id: "settings", label: "Settings" }
   ];
 
   if (loading) {
     return (
-      <AppLayout>
+      
         <div className="flex items-center justify-center h-full">
           <Icons.loader className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      </AppLayout>
+      
     );
   }
 
   if (!customer) {
     return (
-      <AppLayout>
+      
         <div className="flex flex-col items-center justify-center h-full space-y-4">
           <h2 className="text-xl font-semibold">Customer not found</h2>
           <Button variant="outline" onClick={() => window.history.back()}>Go Back</Button>
         </div>
-      </AppLayout>
+      
     );
   }
 
   return (
-    <AppLayout>
+    
       <div className="max-w-[var(--container-wide)] mx-auto space-y-6">
         
         {/* Header Section */}
@@ -112,14 +113,18 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
           {activeTab === "overview" && <CustomerOverview customerId={customer.id} />}
           {activeTab === "activity" && <CustomerActivity customerId={customer.id} />}
           {activeTab === "orders" && <CustomerOrders customerId={customer.id} />}
+          {activeTab === "statements" && <CustomerStatements customerId={customer.id} />}
           {/* Implement other tabs as needed */}
-          {["payments", "ledger", "documents", "settings"].includes(activeTab) && (
+          {["payments", "ledger", "settings"].includes(activeTab) && (
             <div className="py-12 text-center text-muted-foreground border rounded-xl border-dashed">
               This module will be implemented in future phases.
             </div>
           )}
         </div>
       </div>
-    </AppLayout>
+    
   );
 }
+
+
+

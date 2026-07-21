@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { Button } from "../components/ui/button";
+import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { Icons } from "../components/ui/icons";
+import { Icons } from "@/components/ui/icons";
 
 export default function Error({
   error,

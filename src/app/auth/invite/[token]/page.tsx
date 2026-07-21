@@ -1,11 +1,11 @@
 import React from "react";
-import { InvitationService } from "../../../../server/services/InvitationService";
+import { InvitationService } from "@/server/services/InvitationService";
 import { notFound, redirect } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../../../components/ui/card";
-import { Label } from "../../../../components/ui/label";
-import { Input } from "../../../../components/ui/input";
-import { Button } from "../../../../components/ui/button";
-import { auth } from "../../../../server/auth"; // Need Better Auth
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { auth } from "@/server/auth"; // Need Better Auth
 import { headers } from "next/headers";
 
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {

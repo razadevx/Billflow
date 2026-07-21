@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Icons } from "../../../../components/ui/icons";
+import { Icons } from "@/components/ui/icons";
 
 interface Props {
   health: "HEALTHY" | "NEEDS_ATTENTION" | "HIGH_RISK";

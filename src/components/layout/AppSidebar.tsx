@@ -41,7 +41,7 @@ export function AppSidebar() {
   return (
     <aside 
       className={cn(
-        "flex-shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border h-full transition-all duration-300 z-20",
+        "print:hidden flex-shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border h-full transition-all duration-300 z-20",
         collapsed ? "w-[72px]" : "w-[280px]"
       )}
     >
@@ -142,3 +142,4 @@ export function AppSidebar() {
     </aside>
   );
 }
+

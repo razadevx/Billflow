@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AppLayout } from "../../components/layout/AppLayout";
-import { DataTable } from "../../components/shared/DataTable";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { DataTable } from "@/components/shared/DataTable";
 import { ColumnDef } from "@tanstack/react-table";
-import { Icons } from "../../components/ui/icons";
-import { Button } from "../../components/ui/button";
+import { Icons } from "@/components/ui/icons";
+import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
 interface Customer {
@@ -78,7 +78,7 @@ export default function CustomersPage() {
   ];
 
   return (
-    <AppLayout>
+    <>    
       <div className="space-y-6 max-w-[var(--container-wide)] mx-auto">
         <div className="flex items-center justify-between">
           <div>
@@ -104,6 +104,6 @@ export default function CustomersPage() {
         </div>
       </div>
       <CustomerForm open={formOpen} onOpenChange={setFormOpen} onSuccess={loadData} />
-    </AppLayout>
+    </>
   );
 }
