@@ -9,6 +9,7 @@ import { Icons } from "../../../components/ui/icons";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
+import { authClient } from "@/lib/auth-client";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -41,8 +42,19 @@ export default function RegisterPage() {
         throw new Error(data.error?.message || "Registration failed");
       }
 
-      toast.success("Account created successfully!");
-      // Onboarding step would go here: router.push("/onboarding");
+      toast.success("Account created successfully! Logging you in...");
+      
+      const signInRes = await authClient.signIn.email({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (signInRes.error) {
+        toast.error("Failed to auto-login. Please log in manually.");
+        router.push("/auth/login");
+        return;
+      }
+
       router.push("/dashboard");
       router.refresh();
     } catch (err: any) {

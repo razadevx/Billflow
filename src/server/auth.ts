@@ -10,6 +10,9 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   emailAndPassword: {
     enabled: true,
+    sendResetPassword: async ({ user, url, token }) => {
+      console.log(`\n\n\n=== PASSWORD RESET ===\nUser: ${user.email}\nReset Link: ${url}\n======================\n\n\n`);
+    },
   },
   user: {
     additionalFields: {

@@ -1,79 +1,143 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icons } from "../ui/icons";
 import { cn } from "../../lib/utils";
+import { Button } from "../ui/button";
 
-const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: Icons.dashboard },
-  { name: "Customers", href: "/customers", icon: Icons.customer },
-  { name: "Inventory", href: "/inventory", icon: Icons.inventory },
-  { name: "Work Orders", href: "/workorders", icon: Icons.workOrder },
-  { name: "Invoices", href: "/invoices", icon: Icons.invoice },
-  { name: "Payments", href: "/payments", icon: Icons.payment },
-  { name: "Khata / Ledger", href: "/khata", icon: Icons.ledger },
-  { name: "Reports", href: "/reports", icon: Icons.report },
+const navGroups = [
+  {
+    label: "Core",
+    items: [
+      { name: "Dashboard", href: "/dashboard", icon: Icons.dashboard },
+      { name: "Customers", href: "/customers", icon: Icons.customer },
+      { name: "Work Orders", href: "/workorders", icon: Icons.workOrder },
+      { name: "Inventory", href: "/inventory", icon: Icons.inventory },
+    ],
+  },
+  {
+    label: "Finance",
+    items: [
+      { name: "Invoices", href: "/invoices", icon: Icons.invoice },
+      { name: "Payments", href: "/payments", icon: Icons.payment },
+      { name: "Khata / Ledger", href: "/khata", icon: Icons.ledger },
+    ],
+  },
+  {
+    label: "Administration",
+    items: [
+      { name: "Reports", href: "/reports", icon: Icons.report },
+      { name: "Settings", href: "/settings", icon: Icons.settings },
+    ],
+  },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <aside className="w-64 flex-shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border h-full transition-all">
-      <div className="h-14 flex items-center px-4 border-b border-sidebar-border">
-        <Icons.inventory className="h-6 w-6 text-primary mr-2" />
-        <span className="font-semibold text-sidebar-foreground tracking-tight">BillFlow</span>
-      </div>
-      
-      <div className="p-4 flex-1 overflow-y-auto">
-        <div className="mb-4 px-2">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            Main Menu
-          </p>
-          <nav className="space-y-1">
-            {navigation.map((item) => {
-              const isActive = pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-                    isActive
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  )}
-                >
-                  <item.icon
-                    className={cn(
-                      "mr-3 flex-shrink-0 h-4 w-4",
-                      isActive ? "text-sidebar-primary-foreground" : "text-muted-foreground"
-                    )}
-                    aria-hidden="true"
-                  />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-      </div>
-      
-      <div className="p-4 border-t border-sidebar-border">
-        <Link
-          href="/settings"
-          className={cn(
-            "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
-            pathname.startsWith("/settings")
-              ? "bg-sidebar-primary text-sidebar-primary-foreground"
-              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+    <aside 
+      className={cn(
+        "flex-shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border h-full transition-all duration-300 z-20",
+        collapsed ? "w-[72px]" : "w-[280px]"
+      )}
+    >
+      <div className={cn(
+        "h-14 flex items-center border-b border-sidebar-border transition-all",
+        collapsed ? "justify-center px-0" : "px-4 justify-between"
+      )}>
+        <div className="flex items-center">
+          <Icons.inventory className="h-6 w-6 text-primary shrink-0" />
+          {!collapsed && (
+            <span className="font-semibold text-sidebar-foreground tracking-tight ml-2 animate-in fade-in">
+              BillFlow
+            </span>
           )}
+        </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => setCollapsed(!collapsed)}
+          className={cn("h-8 w-8 text-muted-foreground hover:bg-sidebar-accent", collapsed && "hidden")}
         >
-          <Icons.settings className="mr-3 h-4 w-4 text-muted-foreground" />
-          Settings
-        </Link>
+          <Icons.chevronLeft className="h-4 w-4" />
+        </Button>
+      </div>
+      
+      {collapsed && (
+        <div className="flex justify-center mt-2">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setCollapsed(false)}
+            className="h-8 w-8 text-muted-foreground hover:bg-sidebar-accent"
+          >
+            <Icons.chevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto py-4 overflow-x-hidden scrollbar-none">
+        <nav className="space-y-6">
+          {navGroups.map((group) => (
+            <div key={group.label} className="px-3">
+              {!collapsed && (
+                <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  {group.label}
+                </p>
+              )}
+              <div className="space-y-1">
+                {group.items.map((item) => {
+                  const isActive = pathname.startsWith(item.href);
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      title={collapsed ? item.name : undefined}
+                      className={cn(
+                        "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors group",
+                        isActive
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                        collapsed && "justify-center px-0"
+                      )}
+                    >
+                      <item.icon
+                        className={cn(
+                          "flex-shrink-0 h-5 w-5",
+                          isActive ? "text-sidebar-primary-foreground" : "text-muted-foreground group-hover:text-sidebar-accent-foreground",
+                          !collapsed && "mr-3"
+                        )}
+                        aria-hidden="true"
+                      />
+                      {!collapsed && (
+                        <span className="truncate">{item.name}</span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+      </div>
+      
+      <div className={cn(
+        "p-4 border-t border-sidebar-border transition-all",
+        collapsed ? "flex justify-center" : "flex items-center space-x-3"
+      )}>
+        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <span className="text-primary font-medium text-xs">US</span>
+        </div>
+        {!collapsed && (
+          <div className="flex flex-col overflow-hidden">
+            <span className="text-sm font-medium truncate">User Profile</span>
+            <span className="text-xs text-muted-foreground truncate">user@billflow.com</span>
+          </div>
+        )}
       </div>
     </aside>
   );

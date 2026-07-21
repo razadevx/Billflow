@@ -22,6 +22,11 @@ import {
   Phone,
   Mail,
   MapPin,
+  DollarSign,
+  Package,
+  Wallet,
+  TrendingUp,
+  BarChart,
   type LucideIcon
 } from "lucide-react";
 
@@ -53,4 +58,9 @@ export const Icons = {
   chevronRight: ChevronRight,
   chevronLeft: ChevronLeft,
   chevronUp: ChevronUp,
+  dollar: DollarSign,
+  package: Package,
+  wallet: Wallet,
+  trend: TrendingUp,
+  chart: BarChart,
 };

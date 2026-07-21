@@ -1,12 +1,20 @@
-import { PageHeader } from "@/components/shared/PageHeader";
+import { Suspense } from "react";
+import InventoryClient from "./InventoryClient";
+
+export const metadata = {
+  title: "Inventory | BillFlow",
+  description: "Manage your inventory and stock levels",
+};
 
 export default function InventoryPage() {
   return (
-    <div>
-      <PageHeader title="Inventory" description="Manage stock and raw materials." />
-      <div className="bg-card text-card-foreground rounded-xl border shadow-sm p-6 flex flex-col items-center justify-center min-h-[400px]">
-        <p className="text-muted-foreground text-lg">Inventory module will go here.</p>
+    <div className="flex-1 space-y-4 p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">Inventory</h2>
       </div>
+      <Suspense fallback={<div>Loading inventory...</div>}>
+        <InventoryClient />
+      </Suspense>
     </div>
   );
 }

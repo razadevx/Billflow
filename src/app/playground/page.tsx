@@ -45,7 +45,7 @@ export default function PlaygroundPage() {
             <Button onClick={handleTestToast} variant="default">
               <Icons.check className="mr-2 h-4 w-4" /> Trigger Toast
             </Button>
-            <Button onClick={handleTestConfirm} variant="destructive">
+            <Button onClick={handleTestConfirm} variant="danger">
               <Icons.delete className="mr-2 h-4 w-4" /> Trigger ConfirmDialog
             </Button>
             <Button variant="outline" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, key: 'k' }))}>
@@ -85,3 +85,4 @@ export default function PlaygroundPage() {
     </AppLayout>
   );
 }
+
