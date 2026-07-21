@@ -1,0 +1,730 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+enum Role {
+  OWNER
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+enum WorkOrderStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  BANK_TRANSFER
+  CHEQUE
+  CREDIT_CARD
+  OTHER
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  PARTIALLY_PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum LedgerEntryType {
+  CREDIT // Money received by the business
+  DEBIT // Money owed by the customer (e.g. invoice created)
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+  BLOCKED
+}
+
+enum InventoryStatus {
+  AVAILABLE
+  LOW_STOCK
+  OUT_OF_STOCK
+  DISCONTINUED
+}
+
+// ==========================================
+// CORE / TENANCY
+// ==========================================
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  taxId     String? // GST/VAT Number
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users         User[]
+  customers     Customer[]
+  inventory     InventoryItem[]
+  workOrders    WorkOrder[]
+  payments      Payment[]
+  khataEntries  KhataEntry[]
+  invoices      Invoice[]
+  activityLogs  ActivityLog[]
+  auditLogs     AuditLog[]
+  settings      Settings[]
+  notifications Notification[]
+  schedules     DailySchedule[]
+  sequences     Sequence[]
+  tags          Tag[]
+  invitations   Invitation[]
+
+  inventoryCategories  InventoryCategory[]
+  inventoryAdjustments InventoryAdjustment[]
+  inventoryHistories   InventoryHistory[]
+  workOrderNotes       WorkOrderNote[]
+  workOrderAttachments WorkOrderAttachment[]
+  paymentHistories     PaymentHistory[]
+
+  @@map("company")
+}
+
+// ==========================================
+// BETTER AUTH & USERS
+// ==========================================
+model User {
+  id        String  @id @default(cuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  role      Role    @default(STAFF)
+
+  name          String
+  email         String
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+
+  activityLogs  ActivityLog[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+  assignedTasks DailySchedule[]
+  customerNotes CustomerNote[]
+  
+  inventoryAdjustments InventoryAdjustment[]
+  workOrderNotes       WorkOrderNote[]
+  workOrderAttachments WorkOrderAttachment[]
+
+  @@unique([email])
+  @@index([companyId])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+model Invitation {
+  id        String   @id @default(uuid())
+  email     String
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  role      Role     @default(STAFF)
+  token     String   @unique
+  expiresAt DateTime
+  acceptedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("invitation")
+}
+
+// ==========================================
+// DOMAIN MODELS
+// ==========================================
+
+model Sequence {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  type      String  // e.g., "CUSTOMER", "WORK_ORDER", "INVOICE"
+  lastValue Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, type])
+  @@map("sequence")
+}
+
+model Customer {
+  id           String  @id @default(uuid())
+  companyId    String
+  company      Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  customerCode String?
+  name         String
+  email        String?
+  phone        String?
+  address      String?
+  taxId        String?
+  
+  creditLimit  Float @default(0)
+  status       CustomerStatus @default(ACTIVE)
+  preferredContact String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // Soft delete / Archive
+
+  workOrders WorkOrder[]
+  payments   Payment[]
+  khata      KhataEntry[]
+  invoices   Invoice[]
+  notes      CustomerNote[]
+  tags       CustomerTag[]
+
+  @@unique([companyId, customerCode])
+  @@index([companyId])
+  @@map("customer")
+}
+
+model CustomerNote {
+  id        String  @id @default(uuid())
+  companyId String
+  
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  authorId String?
+  author   User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  text String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@map("customer_note")
+}
+
+model Tag {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  name  String
+  color String? // Hex code for UI
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customerTags CustomerTag[]
+
+  @@unique([companyId, name])
+  @@map("tag")
+}
+
+model CustomerTag {
+  id         String   @id @default(uuid())
+  
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  tagId      String
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+
+  @@unique([customerId, tagId])
+  @@map("customer_tag")
+}
+
+model InventoryCategory {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  items InventoryItem[]
+
+  @@unique([companyId, name])
+  @@map("inventory_category")
+}
+
+model InventoryItem {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  categoryId String?
+  category   InventoryCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  name         String
+  sku          String?
+  description  String?
+  
+  currentStock     Float @default(0)
+  reservedQuantity Float @default(0)
+  availableQuantity Float @default(0) // Usually currentStock - reservedQuantity
+  
+  unit         String // e.g. "pcs", "kg", "meters"
+  reorderLevel Float   @default(0)
+  unitPrice    Float   @default(0) // Cost price
+  status       InventoryStatus @default(AVAILABLE)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  lineItems   LineItem[]
+  adjustments InventoryAdjustment[]
+  history     InventoryHistory[]
+
+  @@index([companyId])
+  @@index([categoryId])
+  @@map("inventory_item")
+}
+
+model InventoryAdjustment {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  itemId String
+  item   InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  quantity Float
+  reason   String
+  notes    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([itemId])
+  @@map("inventory_adjustment")
+}
+
+model InventoryHistory {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  itemId String
+  item   InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  action           String // e.g., RESERVED, CONSUMED, ADJUSTED
+  previousQuantity Float
+  newQuantity      Float
+
+  referenceType String? // e.g., "WorkOrder", "Invoice"
+  referenceId   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([itemId])
+  @@index([referenceType, referenceId])
+  @@map("inventory_history")
+}
+
+model WorkOrder {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  orderNumber String // e.g. WO-2023-0001
+  title       String
+  description String?
+  status      WorkOrderStatus @default(PENDING)
+  priority    Int             @default(0) // 0=Normal, 1=High, 2=Urgent
+
+  expectedDate  DateTime?
+  completedDate DateTime?
+
+  subtotal Float @default(0)
+  tax      Float @default(0)
+  total    Float @default(0)
+  
+  inventoryStatus String @default("UNRESERVED") // e.g. UNRESERVED, PARTIALLY_RESERVED, RESERVED, CONSUMED
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  lineItems       LineItem[]
+  payments        Payment[]
+  invoices        Invoice[]
+  scheduleEntries DailySchedule[]
+  notes           WorkOrderNote[]
+  attachments     WorkOrderAttachment[]
+
+  @@index([companyId])
+  @@index([customerId])
+  @@map("work_order")
+}
+
+model WorkOrderNote {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  text String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([workOrderId])
+  @@map("work_order_note")
+}
+
+model WorkOrderAttachment {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  fileName String
+  fileUrl  String
+  fileSize Int
+  mimeType String
+
+  uploadedById String?
+  uploadedBy   User?   @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([workOrderId])
+  @@map("work_order_attachment")
+}
+
+model LineItem {
+  id String @id @default(uuid())
+
+  workOrderId String
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  inventoryItemId String?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+
+  description String
+  quantity    Float
+  unitPrice   Float
+  taxRate     Float  @default(0)
+  total       Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workOrderId])
+  @@map("line_item")
+}
+
+model Payment {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  workOrderId String?
+  workOrder   WorkOrder? @relation(fields: [workOrderId], references: [id])
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id])
+
+  receiptNumber   String?
+  amount          Float
+  method          PaymentMethod @default(CASH)
+  status          PaymentStatus @default(PENDING)
+  referenceNumber String? // UPI Transaction ID, Cheque No, etc.
+  notes           String?
+  paymentDate     DateTime      @default(now())
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  khataEntries KhataEntry[]
+  history      PaymentHistory[]
+
+  @@index([companyId])
+  @@index([customerId])
+  @@map("payment")
+}
+
+model PaymentHistory {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  paymentId String
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  status PaymentStatus // The status that the payment transitioned to
+  notes  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([paymentId])
+  @@map("payment_history")
+}
+
+model Invoice {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  workOrderId String?
+  workOrder   WorkOrder? @relation(fields: [workOrderId], references: [id])
+
+  invoiceNumber String
+  issueDate     DateTime  @default(now())
+  dueDate       DateTime?
+
+  subtotal   Float @default(0)
+  tax        Float @default(0)
+  discount   Float @default(0)
+  total      Float @default(0)
+  balanceDue Float @default(0)
+
+  status InvoiceStatus @default(DRAFT)
+  notes  String?
+  terms  String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  payments     Payment[]
+  khataEntries KhataEntry[]
+
+  @@unique([companyId, invoiceNumber])
+  @@index([customerId])
+  @@map("invoice")
+}
+
+model KhataEntry {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  paymentId String?
+  payment   Payment? @relation(fields: [paymentId], references: [id])
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id])
+
+  type        LedgerEntryType
+  amount      Float
+  description String?
+  date        DateTime        @default(now())
+
+  // Running balance for the customer after this entry (optional, can be calculated)
+  runningBalance Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([customerId])
+  @@map("khata_entry")
+}
+
+model DailySchedule {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  workOrderId String?
+  workOrder   WorkOrder? @relation(fields: [workOrderId], references: [id])
+
+  assignedTo String?
+  user       User?   @relation(fields: [assignedTo], references: [id])
+
+  title       String
+  description String?
+  date        DateTime
+  startTime   DateTime?
+  endTime     DateTime?
+  isCompleted Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([date])
+  @@map("daily_schedule")
+}
+
+model Settings {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  key   String
+  value String // Stored as JSON string typically
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, key])
+  @@map("settings")
+}
+
+model ActivityLog {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  action     String // e.g. "CREATED", "UPDATED", "DELETED"
+  entityType String // e.g. "WorkOrder", "Invoice"
+  entityId   String // ID of the entity
+  details    String? // JSON string containing changes
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([entityType, entityId])
+  @@map("activity_log")
+}
+
+model AuditLog {
+  id        String  @id @default(uuid())
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  event     String // e.g. "LOGIN_FAILED", "SETTINGS_CHANGED", "EXPORT_DATA"
+  ipAddress String?
+  userAgent String?
+  details   String? // JSON string
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@map("audit_log")
+}
+
+model Notification {
+  id        String  @id @default(uuid())
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  title   String
+  message String
+  isRead  Boolean @default(false)
+  link    String? // URL to redirect on click
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([companyId])
+  @@map("notification")
+}
