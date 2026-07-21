@@ -7,6 +7,7 @@ export interface DashboardData {
     outstandingBalance: number;
     activeWorkOrders: number;
     lowStockItems: number;
+    stockValuation: number;
   };
   todayWorkOrders: unknown[];
   recentPayments: unknown[];
@@ -36,8 +37,15 @@ export class DashboardService {
       });
 
       const lowStockItemsCount = await prisma.inventoryItem.count({
-        where: { companyId, status: { in: ["LOW_STOCK", "OUT_OF_STOCK"] } }
+        where: { companyId, status: { in: ["LOW_STOCK", "OUT_OF_STOCK"] }, deletedAt: null }
       });
+
+      const valuationRaw = await prisma.$queryRaw<Array<{ valuation: number | null }>>`
+        SELECT SUM("currentStock" * "unitPrice") as valuation
+        FROM inventory_item
+        WHERE "companyId" = ${companyId} AND "deletedAt" IS NULL
+      `;
+      const stockValuation = Number(valuationRaw[0]?.valuation || 0);
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -59,7 +67,7 @@ export class DashboardService {
       });
 
       const lowStockItemsList = await prisma.inventoryItem.findMany({
-        where: { companyId, status: { in: ["LOW_STOCK", "OUT_OF_STOCK"] } },
+        where: { companyId, status: { in: ["LOW_STOCK", "OUT_OF_STOCK"] }, deletedAt: null },
         take: 5,
         orderBy: { availableQuantity: "asc" }
       });
@@ -92,7 +100,8 @@ export class DashboardService {
           totalRevenue,
           outstandingBalance,
           activeWorkOrders,
-          lowStockItems: lowStockItemsCount
+          lowStockItems: lowStockItemsCount,
+          stockValuation,
         },
         todayWorkOrders,
         recentPayments,

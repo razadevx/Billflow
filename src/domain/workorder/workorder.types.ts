@@ -12,9 +12,15 @@ export interface CreateWorkOrderDTO {
 export interface CreateWorkOrderLineItemDTO {
   inventoryItemId?: string;
   description: string;
-  quantity: number;
-  unitPrice: number;
+  quantity?: number;
+  unitPrice?: number;
   taxRate?: number;
+  
+  // SqFt Engine fields
+  isSqFt?: boolean;
+  width?: number;
+  height?: number;
+  rate?: number;
 }
 
 export interface UpdateWorkOrderDTO {

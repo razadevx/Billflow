@@ -27,6 +27,7 @@ export interface UpdateInventoryItemInput {
 export interface AdjustStockInput {
   itemId: string;
   quantity: number; // positive for addition, negative for reduction
+  type: string; // RESTOCK, SHRINKAGE, CORRECTION
   reason: string;
   notes?: string;
   referenceType?: string;

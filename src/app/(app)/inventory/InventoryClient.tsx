@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Filter, AlertTriangle } from "lucide-react";
+import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +58,36 @@ export default function InventoryClient() {
             <div className="text-2xl font-bold">{data?.total || 0}</div>
           </div>
         </div>
+        <div className="rounded-xl border bg-card text-card-foreground shadow">
+          <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="tracking-tight text-sm font-medium">Low Stock</h3>
+          </div>
+          <div className="p-6 pt-0">
+            <div className="text-2xl font-bold text-yellow-600">
+              {inventoryItems.filter((i: any) => i.status === 'LOW_STOCK').length}
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl border bg-card text-card-foreground shadow">
+          <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="tracking-tight text-sm font-medium">Out of Stock</h3>
+          </div>
+          <div className="p-6 pt-0">
+            <div className="text-2xl font-bold text-red-600">
+              {inventoryItems.filter((i: any) => i.status === 'OUT_OF_STOCK').length}
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl border bg-card text-card-foreground shadow">
+          <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
+            <h3 className="tracking-tight text-sm font-medium">Valuation (Current View)</h3>
+          </div>
+          <div className="p-6 pt-0">
+            <div className="text-2xl font-bold">
+              ${inventoryItems.reduce((acc: number, item: any) => acc + (item.currentStock * (item.unitPrice || 0)), 0).toFixed(2)}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center justify-between">
@@ -95,6 +126,8 @@ export default function InventoryClient() {
               <TableHead>SKU</TableHead>
               <TableHead>Category</TableHead>
               <TableHead className="text-right">Stock</TableHead>
+              <TableHead className="text-right">Unit Price</TableHead>
+              <TableHead className="text-right">Value</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -102,13 +135,13 @@ export default function InventoryClient() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                   Loading inventory...
                 </TableCell>
               </TableRow>
             ) : inventoryItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                   No items found.
                 </TableCell>
               </TableRow>
@@ -133,11 +166,16 @@ export default function InventoryClient() {
                       )}
                     </div>
                   </TableCell>
+                  <TableCell className="text-right">${(item.unitPrice || 0).toFixed(2)}</TableCell>
+                  <TableCell className="text-right">${((item.unitPrice || 0) * item.currentStock).toFixed(2)}</TableCell>
                   <TableCell>{getStatusBadge(item.status)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => setAdjustItem(item)}>
                       Adjust
                     </Button>
+                    <Link href={`/inventory/${item.id}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
+                      View
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))

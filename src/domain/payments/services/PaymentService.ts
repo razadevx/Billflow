@@ -8,6 +8,7 @@ import { SequenceService } from "@/server/core/sequence/SequenceService";
 import { eventBus } from "@/server/events/InMemoryEventBus";
 import { DomainEvents } from "@/server/events/DomainEventTypes";
 import { TransactionManager } from "@/server/db";
+import { LedgerFacade } from "@/domain/ledger/public";
 
 export class PaymentService extends BaseService {
   constructor(ctx: RequestContext, private readonly paymentRepo: PaymentRepository = new PaymentRepository()) {
@@ -37,6 +38,18 @@ export class PaymentService extends BaseService {
         });
 
         await txRepo.addHistory(this.ctx.companyId, payment.id, PaymentStatus.PAID, "Payment recorded");
+
+        const ledgerResult = await LedgerFacade.recordCredit(this.ctx, tx, {
+          customerId: payment.customerId,
+          amount: payment.amount,
+          paymentId: payment.id,
+          invoiceId: payment.invoiceId || undefined,
+          description: `Payment received - ${payment.method} ${payment.referenceNumber ? `(Ref: ${payment.referenceNumber})` : ''}`
+        });
+
+        if (ledgerResult.isFailure()) {
+          throw new Error(ledgerResult.error?.message || "Failed to record ledger credit");
+        }
 
         eventBus.publish({
           type: DomainEvents.PAYMENT_RECORDED,
@@ -69,6 +82,19 @@ export class PaymentService extends BaseService {
         });
 
         await txRepo.addHistory(this.ctx.companyId, id, PaymentStatus.REFUNDED, input.notes || "Payment voided");
+
+        // Reverse the payment in the ledger by creating a DEBIT entry
+        const ledgerResult = await LedgerFacade.recordDebit(this.ctx, tx, {
+          customerId: updated.customerId,
+          amount: updated.amount,
+          paymentId: updated.id,
+          invoiceId: updated.invoiceId || undefined,
+          description: `Payment voided/refunded - ${input.notes || ''}`
+        });
+
+        if (ledgerResult.isFailure()) {
+          throw new Error(ledgerResult.error?.message || "Failed to record ledger debit for voided payment");
+        }
 
         eventBus.publish({
           type: DomainEvents.PAYMENT_VOIDED,

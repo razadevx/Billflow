@@ -80,4 +80,11 @@ export class InventoryFacade {
     const service = new InventoryService(ctx);
     return service.getCategories();
   }
+
+  static async createCategory(ctx: RequestContext, name: string, description?: string) {
+    return TransactionManager.run(async (tx) => {
+      const service = new InventoryService(ctx, tx);
+      return service.createCategory(name, description);
+    });
+  }
 }

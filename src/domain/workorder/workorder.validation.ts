@@ -4,9 +4,13 @@ import { WorkOrderStatus } from "@prisma/client";
 export const CreateWorkOrderLineItemSchema = z.object({
   inventoryItemId: z.string().uuid().optional(),
   description: z.string().min(1),
-  quantity: z.number().positive(),
-  unitPrice: z.number().min(0),
+  quantity: z.number().positive().optional(),
+  unitPrice: z.number().min(0).optional(),
   taxRate: z.number().min(0).optional(),
+  isSqFt: z.boolean().optional(),
+  width: z.number().min(0).optional(),
+  height: z.number().min(0).optional(),
+  rate: z.number().min(0).optional(),
 });
 
 export const CreateWorkOrderSchema = z.object({

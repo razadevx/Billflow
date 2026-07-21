@@ -10,6 +10,7 @@ import { SequenceService } from "@/server/core/sequence/SequenceService";
 import { MoneyCalculator } from "@/server/core/money/MoneyCalculator";
 import { Money } from "@/server/core/money/Money";
 import { WorkOrderStatus } from "@prisma/client";
+import { SquareFootCalculator } from "./square-foot-calculator";
 
 export class WorkOrderService extends BaseService {
   constructor(ctx: RequestContext) {
@@ -27,25 +28,40 @@ export class WorkOrderService extends BaseService {
 
       const orderNumber = await SequenceService.reserveSequence(tx, this.ctx.companyId, "WO", "WO");
 
+      const processedLineItems = dto.lineItems.map(li => {
+        let quantity = li.quantity || 1;
+        let unitPrice = li.unitPrice || 0;
+        let desc = li.description;
+        
+        if (li.isSqFt) {
+          const sqftPerItem = SquareFootCalculator.calculateSqFt(li.width || 0, li.height || 0);
+          unitPrice = SquareFootCalculator.calculateLineTotal(sqftPerItem, li.rate || 0);
+          desc += ` (${li.width} x ${li.height} = ${sqftPerItem} sqft @ $${li.rate}/sqft)`;
+        }
+
+        const total = (quantity * unitPrice) * (1 + (li.taxRate || 0) / 100);
+
+        return {
+          inventoryItemId: li.inventoryItemId,
+          description: desc,
+          quantity,
+          unitPrice,
+          taxRate: li.taxRate || 0,
+          total,
+        };
+      });
+
       let subtotal = 0;
       let tax = 0;
       let total = 0;
 
-      for (const item of dto.lineItems) {
+      for (const item of processedLineItems) {
         const itemTotal = item.quantity * item.unitPrice;
-        const itemTax = itemTotal * ((item.taxRate || 0) / 100);
+        const itemTax = itemTotal * (item.taxRate / 100);
         
-        const mSubtotal = Money.fromNumber(subtotal);
-        const mItemTotal = Money.fromNumber(itemTotal);
-        subtotal = MoneyCalculator.add(mSubtotal, mItemTotal).toNumber();
-        
-        const mTax = Money.fromNumber(tax);
-        const mItemTax = Money.fromNumber(itemTax);
-        tax = MoneyCalculator.add(mTax, mItemTax).toNumber();
-        
-        const mTotal = Money.fromNumber(total);
-        const mItemAndTax = MoneyCalculator.add(mItemTotal, mItemTax);
-        total = MoneyCalculator.add(mTotal, mItemAndTax).toNumber();
+        subtotal = MoneyCalculator.add(Money.fromNumber(subtotal), Money.fromNumber(itemTotal)).toNumber();
+        tax = MoneyCalculator.add(Money.fromNumber(tax), Money.fromNumber(itemTax)).toNumber();
+        total = MoneyCalculator.add(Money.fromNumber(total), MoneyCalculator.add(Money.fromNumber(itemTotal), Money.fromNumber(itemTax))).toNumber();
       }
 
       const workOrder = await repo.createWithLineItems({
@@ -59,27 +75,23 @@ export class WorkOrderService extends BaseService {
         subtotal,
         tax,
         total,
-        inventoryStatus: "RESERVED",
+        inventoryStatus: "UNRESERVED",
         status: WorkOrderStatus.PENDING,
-      }, dto.lineItems.map(li => ({
-        inventoryItemId: li.inventoryItemId,
-        description: li.description,
-        quantity: li.quantity,
-        unitPrice: li.unitPrice,
-        taxRate: li.taxRate || 0,
-        total: (li.quantity * li.unitPrice) * (1 + (li.taxRate || 0) / 100),
-      })));
+      }, processedLineItems);
 
-      for (const item of dto.lineItems) {
-        if (item.inventoryItemId) {
-          await InventoryFacade.reserveStock(this.ctx, {
-            itemId: item.inventoryItemId,
-            quantity: item.quantity,
-            referenceType: "WorkOrder",
-            referenceId: workOrder.id
-          });
+      // Create Activity Log
+      await tx.activityLog.create({
+        data: {
+          companyId: this.ctx.companyId,
+          userId: this.ctx.userId,
+          action: "CREATED",
+          entityType: "WorkOrder",
+          entityId: workOrder.id,
+          details: JSON.stringify({ status: WorkOrderStatus.PENDING, title: workOrder.title }),
         }
-      }
+      });
+
+      // No inventory reservation on create. Reserving happens when production starts.
 
       return success(workOrder);
     });
@@ -153,6 +165,62 @@ export class WorkOrderService extends BaseService {
         }
       }
 
+      // Activity Log instead of raw status updates
+      await tx.activityLog.create({
+        data: {
+          companyId: this.ctx.companyId,
+          userId: this.ctx.userId,
+          action: "COMPLETED",
+          entityType: "WorkOrder",
+          entityId: wo.id,
+          details: JSON.stringify({ status: WorkOrderStatus.COMPLETED }),
+        }
+      });
+
+      return success(true);
+    });
+  }
+
+  async updateStatus(id: string, granularStatus: string, prismaStatus: WorkOrderStatus) {
+    return TransactionManager.run(async (tx) => {
+      const repo = new WorkOrderRepository(tx);
+      const wo = await repo.findByIdWithDetails(id, this.ctx.companyId);
+      if (!wo) return fail(new Error("Work Order not found"));
+
+      let newInventoryStatus = wo.inventoryStatus;
+
+      // Rule: Reserve inventory when Production Starts (e.g. IN_PROGRESS)
+      if (prismaStatus === WorkOrderStatus.IN_PROGRESS && wo.inventoryStatus === "UNRESERVED") {
+        newInventoryStatus = "RESERVED";
+        for (const item of wo.lineItems) {
+          if (item.inventoryItemId) {
+            await InventoryFacade.reserveStock(this.ctx, {
+              itemId: item.inventoryItemId,
+              quantity: item.quantity,
+              referenceType: "WorkOrder",
+              referenceId: wo.id
+            });
+          }
+        }
+      }
+
+      await repo.update(id, this.ctx.companyId, { 
+        status: prismaStatus,
+        inventoryStatus: newInventoryStatus
+      });
+
+      // Track granular status in Activity Log
+      await tx.activityLog.create({
+        data: {
+          companyId: this.ctx.companyId,
+          userId: this.ctx.userId,
+          action: "STATUS_CHANGED",
+          entityType: "WorkOrder",
+          entityId: wo.id,
+          details: JSON.stringify({ status: prismaStatus, granularStatus }),
+        }
+      });
+
       return success(true);
     });
   }
@@ -178,6 +246,23 @@ export class WorkOrderService extends BaseService {
       });
 
       return success(assignment);
+    });
+  }
+
+  async addNote(id: string, text: string) {
+    return TransactionManager.run(async (tx) => {
+      const repo = new WorkOrderRepository(tx);
+      const wo = await repo.findByIdWithDetails(id, this.ctx.companyId);
+      if (!wo) return fail(new Error("Work Order not found"));
+
+      const note = await repo.createNote({
+        companyId: this.ctx.companyId,
+        workOrderId: id,
+        userId: this.ctx.userId,
+        text,
+      });
+
+      return success(note);
     });
   }
 }

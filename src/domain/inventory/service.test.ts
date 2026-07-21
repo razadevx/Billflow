@@ -44,11 +44,14 @@ describe('InventoryService - adjustStock', () => {
     mockRepo.recordAdjustment.mockResolvedValue({} as any);
     mockRepo.recordHistory.mockResolvedValue({} as any);
 
-    const result = await service.adjustStock({
+    const input = {
       itemId: 'item-1',
+      type: 'ADD' as any,
       quantity: 5,
       reason: 'RESTOCK'
-    });
+    };
+
+    const result = await service.adjustStock(input);
 
     expect(result.isSuccess()).toBe(true);
     if (result.isSuccess()) {
@@ -75,11 +78,14 @@ describe('InventoryService - adjustStock', () => {
 
     mockRepo.findById.mockResolvedValue(mockItem as any);
 
-    const result = await service.adjustStock({
+    const input = {
       itemId: 'item-1',
-      quantity: -15,
-      reason: 'SHRINKAGE'
-    });
+      type: 'REMOVE' as any,
+      quantity: 15,
+      reason: 'DAMAGE'
+    };
+
+    const result = await service.adjustStock(input);
 
     expect(result.isFailure()).toBe(true);
     if (result.isFailure()) {
@@ -105,7 +111,8 @@ describe('InventoryService - adjustStock', () => {
     // Drop stock to exactly reorder level
     await service.adjustStock({
       itemId: 'item-1',
-      quantity: -5,
+      type: 'REMOVE' as any,
+      quantity: 5,
       reason: 'CORRECTION'
     });
 

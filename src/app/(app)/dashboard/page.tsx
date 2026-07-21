@@ -70,7 +70,7 @@ export default function DashboardPage() {
 
         {/* Hero KPIs */}
         <PageSection>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
             <MetricCard 
               title="Revenue"
               value=".00"
@@ -104,6 +104,14 @@ export default function DashboardPage() {
               accentColor="warning"
               className="animate-slide-up"
               style={{ animationDelay: "400ms" }}
+            />
+            <MetricCard 
+              title="Stock Valuation"
+              value={`$${(data?.kpis.stockValuation || 0).toFixed(2)}`}
+              icon={Icons.wallet}
+              accentColor="success"
+              className="animate-slide-up"
+              style={{ animationDelay: "500ms" }}
             />
           </div>
         </PageSection>

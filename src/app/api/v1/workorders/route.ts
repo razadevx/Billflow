@@ -1,6 +1,34 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { getRequestContext } from "@/server/core/context";
 import { WorkOrderService } from "@/domain/workorder/workorder.service";
+import { db } from "@/server/db";
+
+export async function GET(request: NextRequest) {
+  try {
+    const ctx = await getRequestContext();
+    if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const searchParams = request.nextUrl.searchParams;
+    const customerId = searchParams.get("customerId");
+    const status = searchParams.get("status") as any;
+    
+    const workOrders = await db.workOrder.findMany({
+      where: {
+        companyId: ctx.companyId,
+        ...(customerId ? { customerId } : {}),
+        ...(status && status !== 'ALL' ? { status } : {}),
+      },
+      include: {
+        customer: { select: { name: true, phone: true } },
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return NextResponse.json(workOrders);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
 
 export async function POST(req: Request) {
   try {

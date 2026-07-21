@@ -87,10 +87,24 @@ export default function CreateInventoryDialog({
               <Label htmlFor="unit">Unit</Label>
               <Input 
                 id="unit" 
+                list="unit-suggestions"
                 value={formData.unit} 
                 onChange={e => setFormData({...formData, unit: e.target.value})} 
                 required 
               />
+              <datalist id="unit-suggestions">
+                <option value="pcs" />
+                <option value="kg" />
+                <option value="g" />
+                <option value="l" />
+                <option value="ml" />
+                <option value="m" />
+                <option value="ft" />
+                <option value="box" />
+                <option value="pack" />
+                <option value="set" />
+                <option value="roll" />
+              </datalist>
             </div>
           </div>
           <div className="space-y-2">

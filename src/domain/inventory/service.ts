@@ -38,6 +38,13 @@ export class InventoryService extends BaseService {
     try {
       const { initialStock = 0, ...itemData } = input;
       
+      if (itemData.sku) {
+        const existingSku = await this.repository.findBySku(this.ctx.companyId, itemData.sku);
+        if (existingSku) {
+          return failure(new Error(`SKU ${itemData.sku} is already in use by another item.`));
+        }
+      }
+
       const status = this.calculateStatus(initialStock, input.reorderLevel || 0);
 
       const item = await this.repository.create(this.ctx.companyId, {
@@ -79,6 +86,13 @@ export class InventoryService extends BaseService {
       const existing = await this.repository.findById(id, this.ctx.companyId);
       if (!existing || existing.deletedAt) {
         return failure(new Error("Item not found"));
+      }
+
+      if (input.sku && input.sku !== existing.sku) {
+        const existingSku = await this.repository.findBySku(this.ctx.companyId, input.sku);
+        if (existingSku) {
+          return failure(new Error(`SKU ${input.sku} is already in use.`));
+        }
       }
 
       // Re-evaluate status if reorder level changes
@@ -159,14 +173,14 @@ export class InventoryService extends BaseService {
         itemId: item.id,
         userId: this.ctx.userId,
         quantity: input.quantity,
-        reason: input.reason,
+        reason: `[${input.type}] ${input.reason}`,
         notes: input.notes,
       });
 
       await this.repository.recordHistory({
         companyId: this.ctx.companyId,
         itemId: item.id,
-        action: "ADJUSTED",
+        action: input.type,
         previousQuantity: previousStock,
         newQuantity: newStock,
         referenceType: input.referenceType,
@@ -350,12 +364,22 @@ export class InventoryService extends BaseService {
   }
 
   async getCategories(): Promise<Result<any[]>> {
-    this.requirePermission("inventory:read");
     try {
-      const result = await this.repository.getCategories(this.ctx.companyId);
-      return success(result);
+      const categories = await this.repository.getCategories(this.ctx.companyId);
+      return success(categories);
     } catch (error: any) {
-      this.logError("Failed to get categories", error);
+      this.logError("Failed to fetch categories", error);
+      return failure(error);
+    }
+  }
+
+  async createCategory(name: string, description?: string): Promise<Result<any>> {
+    this.requirePermission("inventory:write");
+    try {
+      const category = await this.repository.createCategory(this.ctx.companyId, name, description);
+      return success(category);
+    } catch (error: any) {
+      this.logError("Failed to create category", error);
       return failure(error);
     }
   }

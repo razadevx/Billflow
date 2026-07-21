@@ -20,7 +20,8 @@ export default function AdjustStockDialog({
   onSuccess: () => void;
 }) {
   const [quantity, setQuantity] = useState(0);
-  const [reason, setReason] = useState("RESTOCK");
+  const [type, setType] = useState("RESTOCK");
+  const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
 
   const mutation = useMutation({
@@ -48,9 +49,11 @@ export default function AdjustStockDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (quantity === 0) return toast.error("Quantity cannot be zero");
+    if (!reason.trim()) return toast.error("Reason is required");
     
     mutation.mutate({
       quantity: Number(quantity),
+      type,
       reason,
       notes,
     });
@@ -68,7 +71,7 @@ export default function AdjustStockDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="type">Adjustment Type</Label>
-            <Select value={reason} onValueChange={(val) => val && setReason(val)}>
+            <Select value={type} onValueChange={(val) => val && setType(val)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -93,7 +96,17 @@ export default function AdjustStockDialog({
             </p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="reason">Reason (Required)</Label>
+            <Input 
+              id="reason" 
+              placeholder="e.g. Damaged during transport"
+              value={reason} 
+              onChange={e => setReason(e.target.value)} 
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes (Optional)</Label>
             <Input 
               id="notes" 
               value={notes} 

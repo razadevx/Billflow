@@ -76,6 +76,22 @@ export class InventoryRepository extends BaseRepository<InventoryItem, CreateInv
     });
   }
 
+  async createCategory(companyId: string, name: string, description?: string) {
+    return this.prisma.inventoryCategory.create({
+      data: {
+        companyId,
+        name,
+        description
+      }
+    });
+  }
+
+  async findBySku(companyId: string, sku: string) {
+    return this.delegate.findFirst({
+      where: { companyId, sku, deletedAt: null }
+    });
+  }
+
   async recordAdjustment(data: Omit<Prisma.InventoryAdjustmentUncheckedCreateInput, 'id' | 'createdAt' | 'updatedAt'>) {
     return this.prisma.inventoryAdjustment.create({ data });
   }

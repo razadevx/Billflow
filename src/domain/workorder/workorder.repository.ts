@@ -48,4 +48,16 @@ export class WorkOrderRepository extends BaseRepository<WorkOrder, Prisma.WorkOr
       data,
     });
   }
+
+  async createNote(data: Prisma.WorkOrderNoteUncheckedCreateInput) {
+    return this.db.workOrderNote.create({
+      data,
+    });
+  }
+
+  async createAttachment(data: Prisma.WorkOrderAttachmentUncheckedCreateInput) {
+    return this.db.workOrderAttachment.create({
+      data,
+    });
+  }
 }
