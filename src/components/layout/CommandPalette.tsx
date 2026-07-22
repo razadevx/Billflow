@@ -123,11 +123,23 @@ export function CommandPalette() {
                 >
                   <Icons.inventory className="mr-2 h-4 w-4 text-muted-foreground" /> Inventory
                 </Command.Item>
+                <Command.Item 
+                  onSelect={() => { router.push("/workorders"); setOpen(false); }}
+                  className="flex items-center px-3 py-2 text-sm rounded-md cursor-pointer aria-selected:bg-accent aria-selected:text-accent-foreground data-[selected=true]:bg-accent mt-1"
+                >
+                  <Icons.workOrder className="mr-2 h-4 w-4 text-muted-foreground" /> Work Orders
+                </Command.Item>
               </Command.Group>
 
               <Command.Group heading="Actions" className="px-2 py-1.5 text-xs font-medium text-muted-foreground mt-2">
                 <Command.Item 
-                  onSelect={() => { console.log("New Customer"); setOpen(false); }}
+                  onSelect={() => { router.push("/workorders/new"); setOpen(false); }}
+                  className="flex items-center px-3 py-2 text-sm rounded-md cursor-pointer aria-selected:bg-accent aria-selected:text-accent-foreground data-[selected=true]:bg-accent mt-1"
+                >
+                  <Icons.add className="mr-2 h-4 w-4 text-muted-foreground" /> Create Work Order
+                </Command.Item>
+                <Command.Item 
+                  onSelect={() => { router.push("/customers"); setOpen(false); }}
                   className="flex items-center px-3 py-2 text-sm rounded-md cursor-pointer aria-selected:bg-accent aria-selected:text-accent-foreground data-[selected=true]:bg-accent mt-1"
                 >
                   <Icons.add className="mr-2 h-4 w-4 text-muted-foreground" /> Create New Customer

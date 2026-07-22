@@ -67,11 +67,12 @@ export function AppHeader() {
           <span className="absolute top-0 right-0 h-2 w-2 bg-destructive rounded-full" />
         </button>
 
-        <button 
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        <button
+          onClick={() => router.push("/workorders/new")}
           className="text-muted-foreground hover:text-foreground"
+          title="Create work order"
         >
-          {theme === "dark" ? <Icons.add className="h-5 w-5" /> : <Icons.dashboard className="h-5 w-5" />}
+          <Icons.add className="h-5 w-5" />
         </button>
         
         {session ? (

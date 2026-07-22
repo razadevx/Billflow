@@ -1,10 +1,12 @@
 import { PageHeader } from "@/components/shared/PageHeader";
 import CreateWorkOrderClient from "./CreateWorkOrderClient";
 
-export default function NewWorkOrderPage() {
+export default async function NewWorkOrderPage({ searchParams }: { searchParams: Promise<{ customerId?: string }> }) {
+  const params = await searchParams;
+
   return (
     <div className="flex-1 p-4 md:p-8 pt-6">
-      <CreateWorkOrderClient />
+      <CreateWorkOrderClient initialCustomerId={params.customerId || ""} />
     </div>
   );
 }

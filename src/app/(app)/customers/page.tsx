@@ -106,6 +106,13 @@ export default function CustomersPage() {
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => router.push(`/workorders/new?customerId=${info.row.original.id}`)}
+          >
+            <Icons.add className="h-4 w-4 mr-2" /> Work Order
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => {
               setEditingCustomer(info.row.original);
               setFormOpen(true);

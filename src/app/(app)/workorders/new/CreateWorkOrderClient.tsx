@@ -16,10 +16,10 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SquareFootCalculator } from "@/domain/workorder/square-foot-calculator";
 
-export default function CreateWorkOrderClient() {
+export default function CreateWorkOrderClient({ initialCustomerId = "" }: { initialCustomerId?: string }) {
   const router = useRouter();
 
-  const [customerId, setCustomerId] = useState("");
+  const [customerId, setCustomerId] = useState(initialCustomerId);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("0");
@@ -37,19 +37,23 @@ export default function CreateWorkOrderClient() {
     taxRate: 0,
   }]);
 
-  const { data: customers = [] } = useQuery({
+  const { data: customers = [], isLoading: customersLoading } = useQuery({
     queryKey: ["customers"],
     queryFn: async () => {
       const res = await fetch("/api/v1/customers");
-      return res.json();
+      if (!res.ok) throw new Error("Failed to load customers");
+      const data = await res.json();
+      return Array.isArray(data) ? data : data.data || [];
     }
   });
 
-  const { data: inventory = [] } = useQuery({
+  const { data: inventory = [], isLoading: inventoryLoading } = useQuery({
     queryKey: ["inventory"],
     queryFn: async () => {
       const res = await fetch("/api/v1/inventory");
-      return res.json();
+      if (!res.ok) throw new Error("Failed to load inventory");
+      const data = await res.json();
+      return Array.isArray(data) ? data : data.data || [];
     }
   });
 
@@ -168,14 +172,49 @@ export default function CreateWorkOrderClient() {
     }
     return acc + (li.quantity * li.unitPrice);
   }, 0);
+  const selectedCustomer = customers.find((customer: any) => customer.id === customerId);
+  const canCreate = Boolean(customerId && title.trim() && lineItems.every((li) => li.description.trim()));
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center space-x-4">
-        <Link href="/workorders" className={buttonVariants({ variant: "ghost", size: "icon" })}>
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <h2 className="text-2xl font-bold tracking-tight">Create Work Order</h2>
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex items-start gap-4">
+          <Link href="/workorders" className={buttonVariants({ variant: "ghost", size: "icon" })}>
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Create Work Order</h2>
+            <p className="text-muted-foreground mt-1">
+              Start with a customer, add line items, then save the job.
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/customers" className={buttonVariants({ variant: "outline" })}>
+            View Customers
+          </Link>
+          <Link href="/inventory" className={buttonVariants({ variant: "outline" })}>
+            View Inventory
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className={`rounded-xl border p-4 ${customerId ? "border-primary/40 bg-primary/10" : "bg-card"}`}>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Step 1</div>
+          <div className="mt-1 font-semibold">Choose customer</div>
+          <div className="text-sm text-muted-foreground">{selectedCustomer?.name || "Required before saving"}</div>
+        </div>
+        <div className={`rounded-xl border p-4 ${title.trim() ? "border-primary/40 bg-primary/10" : "bg-card"}`}>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Step 2</div>
+          <div className="mt-1 font-semibold">Add job details</div>
+          <div className="text-sm text-muted-foreground">{title.trim() || "Title and notes"}</div>
+        </div>
+        <div className={`rounded-xl border p-4 ${lineItems.every((li) => li.description.trim()) ? "border-primary/40 bg-primary/10" : "bg-card"}`}>
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Step 3</div>
+          <div className="mt-1 font-semibold">Price line items</div>
+          <div className="text-sm text-muted-foreground">{lineItems.length} item(s), ${subtotal.toFixed(2)}</div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -205,7 +244,7 @@ export default function CreateWorkOrderClient() {
             </CardHeader>
             <CardContent className="space-y-6">
               {lineItems.map((li, index) => (
-                <div key={li.id} className="p-4 border rounded-lg space-y-4 relative bg-slate-50/50">
+                <div key={li.id} className="p-4 border rounded-lg space-y-4 relative bg-muted/30">
                   <div className="absolute top-2 right-2">
                     <Button variant="ghost" size="icon" onClick={() => removeLineItem(li.id)} disabled={lineItems.length === 1}>
                       <Trash2 className="h-4 w-4 text-red-500" />
@@ -221,6 +260,7 @@ export default function CreateWorkOrderClient() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="custom">-- Custom Item --</SelectItem>
+                          {inventoryLoading && <SelectItem value="loading" disabled>Loading inventory...</SelectItem>}
                           {inventory.map((inv: any) => (
                             <SelectItem key={inv.id} value={inv.id}>{inv.name}</SelectItem>
                           ))}
@@ -287,11 +327,17 @@ export default function CreateWorkOrderClient() {
                     <SelectValue placeholder="Select customer" />
                   </SelectTrigger>
                   <SelectContent>
+                    {customersLoading && <SelectItem value="loading" disabled>Loading customers...</SelectItem>}
                     {customers.map((c: any) => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {!customersLoading && customers.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No customers yet. <Link href="/customers" className="text-primary hover:underline">Create a customer first</Link>.
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Priority</Label>
@@ -324,7 +370,12 @@ export default function CreateWorkOrderClient() {
                 <span>${subtotal.toFixed(2)}</span>
               </div>
 
-              <Button className="w-full mt-4" onClick={handleSave} disabled={createMutation.isPending}>
+              {!canCreate && (
+                <p className="text-xs text-muted-foreground">
+                  Select a customer, enter a title, and describe each line item to enable saving.
+                </p>
+              )}
+              <Button className="w-full mt-4" onClick={handleSave} disabled={createMutation.isPending || !canCreate}>
                 {createMutation.isPending ? "Creating..." : "Create Work Order"}
               </Button>
             </CardContent>

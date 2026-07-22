@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, ClipboardList } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,9 +43,24 @@ export default function WorkOrderClient() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+    <div className="space-y-5">
+      <div className="rounded-2xl border bg-card p-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="rounded-xl bg-primary/10 p-3 text-primary">
+            <ClipboardList className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="font-semibold">Create and track jobs from one place</h2>
+            <p className="text-sm text-muted-foreground">Use the blue button for a new job, or open an existing row to update status and payments.</p>
+          </div>
+        </div>
+        <Link href="/workorders/new" className={buttonVariants({ variant: "default" })}>
+          <Plus className="mr-2 h-4 w-4" /> Create Work Order
+        </Link>
+      </div>
+
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="relative w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -69,8 +84,8 @@ export default function WorkOrderClient() {
             </SelectContent>
           </Select>
         </div>
-        <Link href="/workorders/new" className={buttonVariants({ variant: "default" })}>
-          <Plus className="mr-2 h-4 w-4" /> New Work Order
+        <Link href="/customers" className={buttonVariants({ variant: "outline" })}>
+          Choose from Customers
         </Link>
       </div>
 
@@ -102,7 +117,7 @@ export default function WorkOrderClient() {
               </TableRow>
             ) : (
               filteredOrders.map((wo: any) => (
-                <TableRow key={wo.id}>
+                <TableRow key={wo.id} className="cursor-pointer" onClick={() => window.location.href = `/workorders/${wo.id}`}>
                   <TableCell className="font-medium">{wo.orderNumber}</TableCell>
                   <TableCell>{wo.title}</TableCell>
                   <TableCell>{wo.customer?.name || "Unknown"}</TableCell>

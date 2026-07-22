@@ -5,6 +5,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Icons } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { CustomerForm } from "../components/CustomerForm";
+import { useRouter } from "next/navigation";
 
 // Future components
 import { CustomerOverview } from "./components/CustomerOverview";
@@ -17,6 +18,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [editOpen, setEditOpen] = useState(false);
+  const router = useRouter();
 
   const loadCustomer = () => {
     setLoading(true);
@@ -94,7 +96,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
           <div className="flex space-x-3">
             <Button variant="outline"><Icons.phone className="mr-2 h-4 w-4" /> Call</Button>
             <Button variant="outline" onClick={() => setEditOpen(true)}><Icons.edit className="mr-2 h-4 w-4" /> Edit</Button>
-            <Button><Icons.add className="mr-2 h-4 w-4" /> New Work Order</Button>
+            <Button onClick={() => router.push(`/workorders/new?customerId=${customer.id}`)}><Icons.add className="mr-2 h-4 w-4" /> New Work Order</Button>
           </div>
         </div>
 
