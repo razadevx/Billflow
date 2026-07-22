@@ -11,6 +11,9 @@ export async function fetchReportData(type: string, filter: ReportFilter) {
   
   let result;
   switch (type) {
+    case "executive":
+      result = await service.getExecutiveDashboard();
+      break;
     case "sales":
       result = await service.getSalesReport(filter);
       break;
@@ -26,8 +29,17 @@ export async function fetchReportData(type: string, filter: ReportFilter) {
     case "cash":
       result = await service.getDailyCashReport(filter);
       break;
+    case "workorders":
+      result = await service.getWorkOrderReport(filter);
+      break;
+    case "squarefeet":
+      result = await service.getSquareFootReport(filter);
+      break;
+    case "customers":
+      result = await service.getCustomerReport(filter);
+      break;
     default:
-      throw new Error("Invalid report type");
+      throw new Error("Invalid report type: " + type);
   }
   
   if (result.isSuccess()) {
