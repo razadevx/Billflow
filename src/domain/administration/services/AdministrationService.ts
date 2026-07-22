@@ -41,7 +41,7 @@ export class AdministrationService extends BaseService {
 
   // --- Company Settings ---
   async getCompanySettings(): Promise<Result<Settings[]>> {
-    this.requirePermission("manage");
+    this.requirePermission("settings:manage");
     try {
       const settings = await this.settingsRepo.findMany(this.ctx.companyId);
       return success(settings);
@@ -52,7 +52,7 @@ export class AdministrationService extends BaseService {
   }
 
   async updateSetting(key: string, value: string): Promise<Result<Settings>> {
-    this.requirePermission("manage");
+    this.requirePermission("settings:manage");
     try {
       return await TransactionManager.run(async (tx) => {
         const repo = new SettingsRepository(tx);
@@ -68,7 +68,7 @@ export class AdministrationService extends BaseService {
 
   // --- Users ---
   async listUsers(): Promise<Result<User[]>> {
-    this.requirePermission("manage");
+    this.requirePermission("users:read");
     try {
       const users = await this.userRepo.findMany(this.ctx.companyId);
       return success(users);
@@ -79,7 +79,7 @@ export class AdministrationService extends BaseService {
   }
 
   async updateUserRole(userId: string, role: Role): Promise<Result<User>> {
-    this.requirePermission("manage");
+    this.requirePermission("users:manage");
     try {
       return await TransactionManager.run(async (tx) => {
         const repo = new UserRepository(tx);
@@ -95,7 +95,7 @@ export class AdministrationService extends BaseService {
 
   // --- Company Details ---
   async getCompany(): Promise<Result<Company>> {
-    this.requirePermission("manage");
+    this.requirePermission("settings:read");
     try {
       const company = await this.companyRepo.findById(this.ctx.companyId, this.ctx.companyId);
       if (!company) throw new Error("Company not found");
@@ -107,7 +107,7 @@ export class AdministrationService extends BaseService {
   }
 
   async updateCompany(data: Partial<Company>): Promise<Result<Company>> {
-    this.requirePermission("manage");
+    this.requirePermission("settings:manage");
     try {
       return await TransactionManager.run(async (tx) => {
         const repo = new CompanyRepository(tx);
@@ -129,7 +129,7 @@ export class AdministrationService extends BaseService {
 
   // --- Sequences ---
   async listSequences(): Promise<Result<Sequence[]>> {
-    this.requirePermission("manage");
+    this.requirePermission("settings:read");
     try {
       const sequences = await this.sequenceRepo.findMany(this.ctx.companyId);
       return success(sequences);
@@ -140,7 +140,7 @@ export class AdministrationService extends BaseService {
   }
 
   async updateSequence(id: string, lastValue: number): Promise<Result<Sequence>> {
-    this.requirePermission("manage");
+    this.requirePermission("settings:manage");
     try {
       return await TransactionManager.run(async (tx) => {
         const repo = new SequenceRepository(tx);
@@ -163,7 +163,7 @@ export class AdministrationService extends BaseService {
 
   // --- Invitations ---
   async listInvitations(): Promise<Result<Invitation[]>> {
-    this.requirePermission("manage");
+    this.requirePermission("users:read");
     try {
       const invitations = await this.invitationRepo.findMany(this.ctx.companyId);
       return success(invitations);
@@ -174,7 +174,7 @@ export class AdministrationService extends BaseService {
   }
 
   async createInvitation(email: string, role: Role): Promise<Result<Invitation>> {
-    this.requirePermission("manage");
+    this.requirePermission("users:manage");
     try {
       return await TransactionManager.run(async (tx) => {
         const repo = new InvitationRepository(tx);
@@ -205,7 +205,7 @@ export class AdministrationService extends BaseService {
   }
 
   async revokeInvitation(id: string): Promise<Result<boolean>> {
-    this.requirePermission("manage");
+    this.requirePermission("users:manage");
     try {
       return await TransactionManager.run(async (tx) => {
         const repo = new InvitationRepository(tx);

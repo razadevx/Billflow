@@ -20,7 +20,7 @@ export class WorkOrderService extends BaseService {
   async createWorkOrder(dto: CreateWorkOrderDTO) {
     const validationResult = CreateWorkOrderSchema.safeParse(dto);
     if (!validationResult.success) {
-      const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      const errors = validationResult.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
       return fail(new Error(`Validation failed: ${errors}`));
     }
 
@@ -101,7 +101,7 @@ export class WorkOrderService extends BaseService {
   async editWorkOrder(id: string, dto: UpdateWorkOrderDTO) {
     const validationResult = UpdateWorkOrderSchema.safeParse(dto);
     if (!validationResult.success) {
-      const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      const errors = validationResult.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
       return fail(new Error(`Validation failed: ${errors}`));
     }
 
@@ -232,7 +232,7 @@ export class WorkOrderService extends BaseService {
   async assignWorkOrder(id: string, dto: AssignWorkOrderDTO) {
     const validationResult = AssignWorkOrderSchema.safeParse(dto);
     if (!validationResult.success) {
-      const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      const errors = validationResult.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
       return fail(new Error(`Validation failed: ${errors}`));
     }
 

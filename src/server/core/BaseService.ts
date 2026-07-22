@@ -25,10 +25,16 @@ export abstract class BaseService {
   }
 
   protected hasPermission(permission: string): boolean {
-    return (
-      this.ctx.permissions.includes("manage") ||
-      this.ctx.permissions.includes(permission)
-    );
+    if (this.ctx.permissions.includes("manage")) return true;
+    if (this.ctx.permissions.includes(permission)) return true;
+    
+    if (permission.includes(":")) {
+      const resource = permission.split(":")[0];
+      if (this.ctx.permissions.includes(`${resource}:manage`)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   protected requirePermission(permission: string) {
