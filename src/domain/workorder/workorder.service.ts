@@ -11,6 +11,7 @@ import { MoneyCalculator } from "@/server/core/money/MoneyCalculator";
 import { Money } from "@/server/core/money/Money";
 import { WorkOrderStatus } from "@prisma/client";
 import { SquareFootCalculator } from "./square-foot-calculator";
+import { SquareFootParser } from "@/domain/report/square-foot-parser";
 
 export class WorkOrderService extends BaseService {
   constructor(ctx: RequestContext) {
@@ -92,8 +93,6 @@ export class WorkOrderService extends BaseService {
         }
       });
 
-      // No inventory reservation on create. Reserving happens when production starts.
-
       return success(workOrder);
     });
   }
@@ -131,9 +130,12 @@ export class WorkOrderService extends BaseService {
       // Release reserved stock
       for (const item of wo.lineItems) {
         if (item.inventoryItemId && wo.inventoryStatus === "RESERVED") {
+          const parsed = SquareFootParser.parse(item.description);
+          const releaseQty = parsed ? parsed.sqft * item.quantity : item.quantity;
+          
           await InventoryFacade.releaseStock(this.ctx, {
             itemId: item.inventoryItemId,
-            quantity: item.quantity,
+            quantity: releaseQty,
             referenceType: "WorkOrder",
             referenceId: wo.id
           });
@@ -157,12 +159,15 @@ export class WorkOrderService extends BaseService {
 
       await repo.update(id, this.ctx.companyId, { status: WorkOrderStatus.COMPLETED, completedDate: new Date(), inventoryStatus: "CONSUMED" });
 
-      // Consume reserved stock
+      // Consume reserved stock (calculating exact sqft deduction if applicable)
       for (const item of wo.lineItems) {
         if (item.inventoryItemId) {
+          const parsed = SquareFootParser.parse(item.description);
+          const consumeQty = parsed ? parsed.sqft * item.quantity : item.quantity;
+
           await InventoryFacade.consumeStock(this.ctx, {
             itemId: item.inventoryItemId,
-            quantity: item.quantity,
+            quantity: consumeQty,
             referenceType: "WorkOrder",
             referenceId: wo.id
           });
@@ -198,9 +203,12 @@ export class WorkOrderService extends BaseService {
         newInventoryStatus = "RESERVED";
         for (const item of wo.lineItems) {
           if (item.inventoryItemId) {
+            const parsed = SquareFootParser.parse(item.description);
+            const reserveQty = parsed ? parsed.sqft * item.quantity : item.quantity;
+
             await InventoryFacade.reserveStock(this.ctx, {
               itemId: item.inventoryItemId,
-              quantity: item.quantity,
+              quantity: reserveQty,
               referenceType: "WorkOrder",
               referenceId: wo.id
             });
