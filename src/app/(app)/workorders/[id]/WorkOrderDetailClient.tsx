@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Printer, AlertTriangle, FileText, CheckCircle, Upload, Paperclip } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { notifyDataChanged } from "@/lib/realtime-sync";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -88,12 +89,7 @@ export default function WorkOrderDetailClient({ idPromise }: { idPromise: Promis
     },
     onSuccess: (data) => {
       toast.success("Invoice generated");
-      queryClient.invalidateQueries({ queryKey: ["workorder", id] });
-      queryClient.invalidateQueries({ queryKey: ["workorders"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard", "workorders"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard", "activity"] });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      notifyDataChanged("invoice");
       router.push(`/invoices/${data.id}`);
     },
     onError: (err: any) => toast.error(err.message)

@@ -7,7 +7,7 @@ import { Payment, PaymentStatus } from "@prisma/client";
 import { SequenceService } from "@/server/core/sequence/SequenceService";
 import { eventBus } from "@/server/events/InMemoryEventBus";
 import { DomainEvents } from "@/server/events/DomainEventTypes";
-import { TransactionManager } from "@/server/db";
+import { TransactionManager, db } from "@/server/db";
 import { LedgerFacade } from "@/domain/ledger/public";
 
 export class PaymentService extends BaseService {
@@ -100,7 +100,7 @@ export class PaymentService extends BaseService {
 
         await txRepo.addHistory(this.ctx.companyId, id, PaymentStatus.REFUNDED, input.notes || "Payment voided");
 
-        // Reverse the payment in the ledger by creating a DEBIT entry
+        // Reverse the payment in the ledger by creating a DEBIT entry (Append-only)
         const ledgerResult = await LedgerFacade.recordDebit(this.ctx, tx, {
           customerId: updated.customerId,
           amount: updated.amount,
@@ -161,6 +161,18 @@ export class PaymentService extends BaseService {
       return ok(payments);
     } catch (e: any) {
       return fail(new Error(`Failed to list payments: ${e.message}`));
+    }
+  }
+
+  async getCollectedCash(): Promise<Result<number>> {
+    try {
+      const result = await db.payment.aggregate({
+        where: { companyId: this.ctx.companyId, status: PaymentStatus.PAID, deletedAt: null },
+        _sum: { amount: true }
+      });
+      return ok(result._sum.amount || 0);
+    } catch (e: any) {
+      return fail(new Error(`Failed to calculate collected cash: ${e.message}`));
     }
   }
 }

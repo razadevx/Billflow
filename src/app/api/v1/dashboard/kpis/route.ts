@@ -11,7 +11,7 @@ export async function GET(_request: NextRequest) {
     if (!context) return errorResponse("Unauthorized", "UNAUTHORIZED", 401);
 
     const service = new DashboardService();
-    const result = await service.getKPIs(context.companyId);
+    const result = await service.getKPIs(context.companyId, context);
 
     if (result.isSuccess()) {
       return successResponse(result.value);

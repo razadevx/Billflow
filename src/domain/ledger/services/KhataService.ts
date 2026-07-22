@@ -62,4 +62,13 @@ export class KhataService {
       return fail(new Error(`Failed to get customers with balances: ${e.message}`));
     }
   }
+
+  async getTotalOutstanding(ctx: RequestContext) {
+    try {
+      const total = await this.repo.getTotalOutstanding(ctx.companyId);
+      return ok(total);
+    } catch (e: any) {
+      return fail(new Error(`Failed to calculate total outstanding balance: ${e.message}`));
+    }
+  }
 }

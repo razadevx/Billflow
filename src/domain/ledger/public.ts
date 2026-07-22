@@ -16,4 +16,7 @@ export const LedgerFacade = {
 
   getCustomersWithBalances: (ctx: RequestContext) =>
     service.getCustomersWithBalances(ctx),
+
+  getTotalOutstanding: (ctx: RequestContext) =>
+    service.getTotalOutstanding(ctx),
 };

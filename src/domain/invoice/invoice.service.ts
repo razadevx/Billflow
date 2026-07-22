@@ -31,6 +31,20 @@ export class InvoiceService extends BaseService {
     });
   }
 
+  async getTotalBilledRevenue() {
+    return TransactionManager.run(async (tx) => {
+      const result = await tx.invoice.aggregate({
+        where: {
+          companyId: this.ctx.companyId,
+          deletedAt: null,
+          status: { not: "CANCELLED" }
+        },
+        _sum: { total: true }
+      });
+      return success(result._sum.total || 0);
+    });
+  }
+
   async generateFromWorkOrder(dto: CreateInvoiceFromWorkOrderDTO) {
     const validationResult = CreateInvoiceFromWorkOrderSchema.safeParse(dto);
     if (!validationResult.success) {
@@ -49,6 +63,26 @@ export class InvoiceService extends BaseService {
         return fail(new Error("Work Order already has an invoice"));
       }
 
+      // Check for advance payments recorded for this work order
+      const existingPayments = await tx.payment.findMany({
+        where: {
+          companyId: this.ctx.companyId,
+          workOrderId: wo.id,
+          status: "PAID",
+          deletedAt: null
+        }
+      });
+
+      const advancePaymentsSum = existingPayments.reduce((sum, p) => sum + p.amount, 0);
+      const balanceDue = Math.max(0, wo.total - advancePaymentsSum);
+      
+      let initialStatus: "DRAFT" | "ISSUED" | "PAID" | "PARTIALLY_PAID" = "ISSUED";
+      if (balanceDue === 0 && wo.total > 0) {
+        initialStatus = "PAID";
+      } else if (advancePaymentsSum > 0) {
+        initialStatus = "PARTIALLY_PAID";
+      }
+
       const invoiceNumber = await SequenceService.reserveSequence(tx, this.ctx.companyId, "INV", "INV");
 
       const invoice = await invoiceRepo.createInvoice({
@@ -62,11 +96,22 @@ export class InvoiceService extends BaseService {
         tax: wo.tax,
         discount: 0,
         total: wo.total,
-        balanceDue: wo.total,
-        status: "DRAFT",
+        balanceDue,
+        status: initialStatus,
         notes: dto.notes,
         terms: dto.terms,
       });
+
+      // Link existing advance payments to this newly created invoice
+      if (existingPayments.length > 0) {
+        await tx.payment.updateMany({
+          where: {
+            id: { in: existingPayments.map(p => p.id) },
+            companyId: this.ctx.companyId
+          },
+          data: { invoiceId: invoice.id }
+        });
+      }
 
       const ledgerResult = await LedgerFacade.recordDebit(this.ctx, tx, {
         customerId: wo.customerId,

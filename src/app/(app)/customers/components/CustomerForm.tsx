@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { CreateCustomerInput } from "@/domain/customer/validation/CustomerValidation";
 import { useQueryClient } from "@tanstack/react-query";
+import { notifyDataChanged } from "@/lib/realtime-sync";
 
 type CustomerFormData = {
   id?: string;
@@ -68,9 +69,7 @@ export function CustomerForm({ open, onOpenChange, onSuccess, customer, redirect
       const data = await res.json();
       
       if (res.ok) {
-        queryClient.invalidateQueries({ queryKey: ["customers"] });
-        queryClient.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
-        queryClient.invalidateQueries({ queryKey: ["dashboard", "activity"] });
+        notifyDataChanged("customer");
         toast.success(isEditing ? "Customer updated successfully!" : "Customer created successfully!");
         onOpenChange(false);
         if (onSuccess) onSuccess();

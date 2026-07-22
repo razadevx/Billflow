@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { notifyDataChanged } from "@/lib/realtime-sync";
 import {
   Select,
   SelectContent,
@@ -178,11 +179,7 @@ export default function ReceivePaymentClient({
 
       if (res.ok) {
         toast.success("Payment recorded successfully!");
-        queryClient.invalidateQueries({ queryKey: ["payments"] });
-        queryClient.invalidateQueries({ queryKey: ["khata"] });
-        queryClient.invalidateQueries({ queryKey: ["invoices"] });
-        queryClient.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
-        queryClient.invalidateQueries({ queryKey: ["dashboard", "activity"] });
+        notifyDataChanged("payment");
         router.push("/payments");
       } else {
         const err = await res.json();

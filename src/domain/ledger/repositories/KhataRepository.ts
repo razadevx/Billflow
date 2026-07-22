@@ -73,6 +73,24 @@ export class KhataRepository extends BaseRepository<
     return debits - credits;
   }
 
+  async getTotalOutstanding(companyId: string): Promise<number> {
+    const aggregate = await this.prisma.khataEntry.groupBy({
+      by: ['type'],
+      where: { companyId },
+      _sum: { amount: true }
+    });
+
+    let debits = 0;
+    let credits = 0;
+
+    for (const row of aggregate) {
+      if (row.type === "DEBIT") debits = row._sum.amount || 0;
+      if (row.type === "CREDIT") credits = row._sum.amount || 0;
+    }
+
+    return Math.max(0, debits - credits);
+  }
+
   async getStatement(companyId: string, customerId: string) {
     // Returns chronological list of entries for a statement
     return this.prisma.khataEntry.findMany({

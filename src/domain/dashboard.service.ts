@@ -1,5 +1,8 @@
 import { Result, success, failure } from "@/server/core/Result";
 import { db as prisma } from "@/server/db";
+import { RequestContext } from "@/server/core/RequestContext";
+import { LedgerFacade } from "@/domain/ledger/public";
+import { InvoiceService } from "@/domain/invoice/invoice.service";
 
 export interface DashboardData {
   kpis: {
@@ -17,20 +20,32 @@ export interface DashboardData {
 }
 
 export class DashboardService {
-  async getKPIs(companyId: string) {
+  async getKPIs(companyId: string, ctx?: RequestContext) {
     try {
-      const woAgg = await prisma.workOrder.aggregate({
-        where: { companyId, status: "COMPLETED" },
-        _sum: { total: true }
-      });
-      const totalRevenue = woAgg._sum.total || 0;
+      let totalRevenue = 0;
+      let outstandingBalance = 0;
 
-      const ledgerRaw = await prisma.$queryRaw<Array<{ balance: number | null }>>`
-        SELECT SUM(amount * CASE WHEN type = 'DEBIT' THEN 1 ELSE -1 END) as balance
-        FROM khata_entry
-        WHERE "companyId" = ${companyId}
-      `;
-      const outstandingBalance = Math.max(0, Number(ledgerRaw[0]?.balance || 0));
+      if (ctx) {
+        const invService = new InvoiceService(ctx);
+        const revenueResult = await invService.getTotalBilledRevenue();
+        totalRevenue = revenueResult.isSuccess() ? (revenueResult.value as number) : 0;
+
+        const khataResult = await LedgerFacade.getTotalOutstanding(ctx);
+        outstandingBalance = khataResult.isSuccess() ? (khataResult.value as number) : 0;
+      } else {
+        const invAgg = await prisma.invoice.aggregate({
+          where: { companyId, status: { not: "CANCELLED" }, deletedAt: null },
+          _sum: { total: true }
+        });
+        totalRevenue = invAgg._sum.total || 0;
+
+        const ledgerRaw = await prisma.$queryRaw<Array<{ balance: number | null }>>`
+          SELECT SUM(amount * CASE WHEN type = 'DEBIT' THEN 1 ELSE -1 END) as balance
+          FROM khata_entry
+          WHERE "companyId" = ${companyId}
+        `;
+        outstandingBalance = Math.max(0, Number(ledgerRaw[0]?.balance || 0));
+      }
 
       const activeWorkOrders = await prisma.workOrder.count({
         where: { companyId, status: { in: ["PENDING", "IN_PROGRESS"] } }
@@ -105,8 +120,20 @@ export class DashboardService {
     }
   }
 
-  async getOutstandingCustomers(companyId: string) {
+  async getOutstandingCustomers(companyId: string, ctx?: RequestContext) {
     try {
+      if (ctx) {
+        const result = await LedgerFacade.getCustomersWithBalances(ctx);
+        if (result.isSuccess() && Array.isArray(result.value)) {
+          const list = (result.value as Array<{ id: string; name: string; balance: number }>)
+            .filter((c) => c.balance > 0)
+            .sort((a, b) => b.balance - a.balance)
+            .slice(0, 5)
+            .map((c) => ({ id: c.id, name: c.name, balance: c.balance }));
+          return success(list);
+        }
+      }
+
       const outstandingCustomersRaw = await prisma.$queryRaw<Array<{ id: string; name: string; balance: number | null }>>`
         SELECT c.id, c.name, SUM(k.amount * CASE WHEN k.type = 'DEBIT' THEN 1 ELSE -1 END) as balance
         FROM khata_entry k
@@ -142,7 +169,7 @@ export class DashboardService {
     }
   }
 
-  async getDashboardData(companyId: string): Promise<Result<DashboardData, Error>> {
+  async getDashboardData(companyId: string, ctx?: RequestContext): Promise<Result<DashboardData, Error>> {
     try {
       const [
         kpisRes,
@@ -152,11 +179,11 @@ export class DashboardService {
         outstandingCustomersRes,
         activityFeedRes
       ] = await Promise.all([
-        this.getKPIs(companyId),
+        this.getKPIs(companyId, ctx),
         this.getTodayWorkOrders(companyId),
         this.getRecentPayments(companyId),
         this.getLowStockItems(companyId),
-        this.getOutstandingCustomers(companyId),
+        this.getOutstandingCustomers(companyId, ctx),
         this.getActivityFeed(companyId)
       ]);
 
