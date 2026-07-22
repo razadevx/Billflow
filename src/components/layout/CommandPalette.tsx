@@ -1,11 +1,27 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Command } from "cmdk";
+import React, { useEffect, useMemo, useState } from "react";
 import { useShortcuts } from "../../hooks/useShortcuts";
 import { Icons } from "../ui/icons";
 import { useRouter } from "next/navigation";
 import { SearchResult } from "../../server/search/GlobalSearchService";
+
+const quickLinks = [
+  { label: "Dashboard", href: "/dashboard", icon: Icons.dashboard, hint: "Business overview" },
+  { label: "Customers", href: "/customers", icon: Icons.customer, hint: "CRM and credit history" },
+  { label: "Work Orders", href: "/workorders", icon: Icons.workOrder, hint: "Jobs and production" },
+  { label: "Inventory", href: "/inventory", icon: Icons.inventory, hint: "Materials and stock" },
+  { label: "Invoices", href: "/invoices", icon: Icons.invoice, hint: "Billing documents" },
+  { label: "Payments", href: "/payments", icon: Icons.payment, hint: "Received payments" },
+  { label: "Khata / Ledger", href: "/khata", icon: Icons.ledger, hint: "Customer balances" },
+];
+
+const actions = [
+  { label: "Create Work Order", href: "/workorders/new", icon: Icons.add, hint: "Start a new job" },
+  { label: "Receive Payment", href: "/payments/new", icon: Icons.payment, hint: "Record cash, bank, or card payment" },
+  { label: "Add Inventory Item", href: "/inventory", icon: Icons.inventory, hint: "Create flex, vinyl, or stock item" },
+  { label: "Settings", href: "/settings", icon: Icons.settings, hint: "Company, currency, users" },
+];
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -14,12 +30,23 @@ export function CommandPalette() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  const close = () => {
+    setOpen(false);
+    setSearch("");
+    setResults([]);
+  };
+
+  const go = (url: string) => {
+    router.push(url);
+    close();
+  };
+
   useShortcuts({
     "Ctrl+k": (e) => {
       e.preventDefault();
-      setOpen((o) => !o);
+      setOpen((value) => !value);
     },
-    "Escape": () => setOpen(false),
+    Escape: close,
   });
 
   useEffect(() => {
@@ -29,132 +56,124 @@ export function CommandPalette() {
   }, []);
 
   useEffect(() => {
-    const fetchSearchResults = async (query: string) => {
-      if (query.trim().length < 2) {
+    if (!open) return;
+
+    const fetchSearchResults = async () => {
+      if (search.trim().length < 2) {
         setResults([]);
         return;
       }
+
       setLoading(true);
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-        if (res.ok) {
-          const data = await res.json();
-          setResults(data.data || []);
-        } else {
-          setResults([]);
-        }
-      } catch (error) {
-        console.error("Search error", error);
+        const res = await fetch(`/api/search?q=${encodeURIComponent(search)}`);
+        const data = await res.json();
+        setResults(res.ok ? data.data || [] : []);
+      } catch {
         setResults([]);
       } finally {
         setLoading(false);
       }
     };
 
-    const debounceTimeout = setTimeout(() => {
-      fetchSearchResults(search);
-    }, 300);
+    const debounce = window.setTimeout(fetchSearchResults, 250);
+    return () => window.clearTimeout(debounce);
+  }, [open, search]);
 
-    return () => clearTimeout(debounceTimeout);
+  const visibleQuickLinks = useMemo(() => {
+    if (!search.trim()) return quickLinks;
+    const term = search.toLowerCase();
+    return quickLinks.filter((link) => link.label.toLowerCase().includes(term));
   }, [search]);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <Command 
-        className="w-full max-w-xl bg-background text-foreground border border-border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
-        onKeyDown={(e) => {
-          if (e.key === "Escape") setOpen(false);
-        }}
-        shouldFilter={false} // We do filtering on the backend
-      >
-        <div className="flex items-center border-b border-border px-4 py-3">
-          <Icons.search className="h-5 w-5 text-muted-foreground mr-3" />
-          <Command.Input 
-            autoFocus 
-            value={search}
-            onValueChange={setSearch}
-            placeholder="Search Customers, Invoices, Work Orders..." 
-            className="flex-1 bg-transparent outline-none text-base placeholder:text-muted-foreground"
-          />
-          {loading && <Icons.loader className="h-4 w-4 animate-spin text-muted-foreground mr-3" />}
-          <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">
-            <Icons.close className="h-5 w-5" />
-          </button>
-        </div>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onMouseDown={close}>
+      <div className="mx-auto mt-[10vh] w-[min(760px,calc(100vw-2rem))]" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="overflow-hidden rounded-2xl border border-border bg-background text-foreground shadow-2xl">
+          <div className="flex items-center gap-3 border-b border-border px-5 py-4">
+            <Icons.search className="h-5 w-5 text-muted-foreground" />
+            <input
+              autoFocus
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search customers, work orders, invoices, payments, inventory..."
+              className="h-10 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
+            />
+            {loading && <Icons.loader className="h-4 w-4 animate-spin text-muted-foreground" />}
+            <kbd className="rounded border bg-muted px-2 py-1 text-[11px] text-muted-foreground">Esc</kbd>
+            <button onClick={close} className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground">
+              <Icons.close className="h-4 w-4" />
+            </button>
+          </div>
 
-        <Command.List className="max-h-[60vh] overflow-y-auto p-2">
-          {!loading && results.length === 0 && search.trim().length >= 2 && (
-            <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
-              No results found for "{search}".
-            </Command.Empty>
-          )}
+          <div className="grid max-h-[66vh] grid-cols-1 gap-4 overflow-y-auto p-4 md:grid-cols-[1fr_280px]">
+            <div className="space-y-4">
+              <section>
+                <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {search.trim().length >= 2 ? "Search Results" : "Quick Navigation"}
+                </div>
+                <div className="space-y-1">
+                  {search.trim().length >= 2 ? (
+                    results.length > 0 ? results.map((result) => {
+                      const Icon = Icons[result.icon as keyof typeof Icons] || Icons.search;
+                      return (
+                        <button
+                          key={`${result.type}-${result.id}`}
+                          onClick={() => go(result.url)}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-muted"
+                        >
+                          <span className="rounded-lg bg-primary/10 p-2 text-primary"><Icon className="h-4 w-4" /></span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-medium">{result.title}</span>
+                            <span className="block truncate text-sm text-muted-foreground">{result.subtitle || result.type}</span>
+                          </span>
+                        </button>
+                      );
+                    }) : (
+                      <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                        No results found for “{search}”.
+                      </div>
+                    )
+                  ) : visibleQuickLinks.map((link) => (
+                    <button
+                      key={link.href}
+                      onClick={() => go(link.href)}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-muted"
+                    >
+                      <span className="rounded-lg bg-muted p-2"><link.icon className="h-4 w-4" /></span>
+                      <span>
+                        <span className="block font-medium">{link.label}</span>
+                        <span className="text-sm text-muted-foreground">{link.hint}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </div>
 
-          {results.length > 0 && (
-            <Command.Group heading="Search Results" className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-              {results.map((result) => {
-                const IconComponent = Icons[result.icon as keyof typeof Icons] || Icons.inventory;
-                return (
-                  <Command.Item 
-                    key={result.id}
-                    onSelect={() => { router.push(result.url); setOpen(false); }}
-                    className="flex items-center px-3 py-2 text-sm rounded-md cursor-pointer aria-selected:bg-accent aria-selected:text-accent-foreground data-[selected=true]:bg-accent mt-1"
+            <aside className="rounded-xl border bg-muted/30 p-3">
+              <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Actions</div>
+              <div className="space-y-1">
+                {actions.map((action) => (
+                  <button
+                    key={action.href + action.label}
+                    onClick={() => go(action.href)}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-background"
                   >
-                    <IconComponent className="mr-3 h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                    <div className="flex flex-col">
-                      <span className="font-medium text-foreground">{result.title}</span>
-                      {result.subtitle && (
-                        <span className="text-xs text-muted-foreground mt-0.5">{result.subtitle}</span>
-                      )}
-                    </div>
-                  </Command.Item>
-                );
-              })}
-            </Command.Group>
-          )}
-
-          {search.trim().length === 0 && (
-            <>
-              <Command.Group heading="Navigation" className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                <Command.Item 
-                  onSelect={() => { router.push("/customers"); setOpen(false); }}
-                  className="flex items-center px-3 py-2 text-sm rounded-md cursor-pointer aria-selected:bg-accent aria-selected:text-accent-foreground data-[selected=true]:bg-accent mt-1"
-                >
-                  <Icons.customer className="mr-2 h-4 w-4 text-muted-foreground" /> Customers
-                </Command.Item>
-                <Command.Item 
-                  onSelect={() => { router.push("/inventory"); setOpen(false); }}
-                  className="flex items-center px-3 py-2 text-sm rounded-md cursor-pointer aria-selected:bg-accent aria-selected:text-accent-foreground data-[selected=true]:bg-accent mt-1"
-                >
-                  <Icons.inventory className="mr-2 h-4 w-4 text-muted-foreground" /> Inventory
-                </Command.Item>
-                <Command.Item 
-                  onSelect={() => { router.push("/workorders"); setOpen(false); }}
-                  className="flex items-center px-3 py-2 text-sm rounded-md cursor-pointer aria-selected:bg-accent aria-selected:text-accent-foreground data-[selected=true]:bg-accent mt-1"
-                >
-                  <Icons.workOrder className="mr-2 h-4 w-4 text-muted-foreground" /> Work Orders
-                </Command.Item>
-              </Command.Group>
-
-              <Command.Group heading="Actions" className="px-2 py-1.5 text-xs font-medium text-muted-foreground mt-2">
-                <Command.Item 
-                  onSelect={() => { router.push("/workorders/new"); setOpen(false); }}
-                  className="flex items-center px-3 py-2 text-sm rounded-md cursor-pointer aria-selected:bg-accent aria-selected:text-accent-foreground data-[selected=true]:bg-accent mt-1"
-                >
-                  <Icons.add className="mr-2 h-4 w-4 text-muted-foreground" /> Create Work Order
-                </Command.Item>
-                <Command.Item 
-                  onSelect={() => { router.push("/customers"); setOpen(false); }}
-                  className="flex items-center px-3 py-2 text-sm rounded-md cursor-pointer aria-selected:bg-accent aria-selected:text-accent-foreground data-[selected=true]:bg-accent mt-1"
-                >
-                  <Icons.add className="mr-2 h-4 w-4 text-muted-foreground" /> Create New Customer
-                </Command.Item>
-              </Command.Group>
-            </>
-          )}
-        </Command.List>
-      </Command>
+                    <action.icon className="h-4 w-4 text-primary" />
+                    <span>
+                      <span className="block text-sm font-medium">{action.label}</span>
+                      <span className="text-xs text-muted-foreground">{action.hint}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

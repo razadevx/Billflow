@@ -14,13 +14,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+type NotificationItem = {
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+  tone: "warning" | "danger" | "info";
+};
+
 export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
-  const { setTheme, theme } = useTheme();
-  // const { data: session } = authClient.useSession();
-  const session = { user: { name: "Mock User", email: "mock@example.com" } };
-  const [notificationCount, setNotificationCount] = useState(0);
+  const { setTheme, resolvedTheme } = useTheme();
+  const [session, setSession] = useState<{ user: { name?: string | null; email?: string | null } }>({
+    user: { name: "User Profile", email: "user@billflow.com" },
+  });
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   // Simple Breadcrumb logic based on pathname
   const segments = pathname.split("/").filter(Boolean);
 
@@ -40,15 +49,39 @@ export function AppHeader() {
   };
 
   useEffect(() => {
+    authClient
+      .getSession()
+      .then((response: any) => {
+        const user = response?.data?.user || response?.user;
+        if (user) setSession({ user });
+      })
+      .catch(() => {});
+
     fetch("/api/dashboard")
       .then((res) => res.ok ? res.json() : null)
       .then((json) => {
         const data = json?.data;
-        const count = (data?.lowStockItems?.length || 0) + (data?.outstandingCustomers?.length || 0);
-        setNotificationCount(count);
+        const lowStock = (data?.lowStockItems || []).map((item: any) => ({
+          id: `stock-${item.id}`,
+          title: "Low stock",
+          description: `${item.name}: ${item.availableQuantity} ${item.unit} left`,
+          href: `/inventory/${item.id}`,
+          tone: "warning" as const,
+        }));
+        const outstanding = (data?.outstandingCustomers || []).map((customer: any) => ({
+          id: `customer-${customer.id}`,
+          title: "Outstanding balance",
+          description: `${customer.name} has unpaid balance`,
+          href: `/khata/${customer.id}`,
+          tone: "danger" as const,
+        }));
+        setNotifications([...lowStock, ...outstanding]);
       })
-      .catch(() => setNotificationCount(0));
+      .catch(() => setNotifications([]));
   }, []);
+
+  const notificationCount = notifications.length;
+  const nextTheme = resolvedTheme === "dark" ? "light" : "dark";
 
   return (
     <header className="print:hidden h-14 bg-background border-b border-border flex items-center justify-between px-6 flex-shrink-0">
@@ -78,22 +111,56 @@ export function AppHeader() {
           <kbd className="ml-4 font-mono text-[10px] bg-background px-1.5 rounded border border-border">Ctrl K</kbd>
         </button>
         
+        <DropdownMenu>
+          <DropdownMenuTrigger className="relative rounded-lg p-2 text-muted-foreground outline-none hover:bg-muted hover:text-foreground">
+            <Icons.notification className="h-5 w-5" />
+            {notificationCount > 0 && (
+              <span className="absolute right-0 top-0 min-w-4 h-4 px-1 rounded-full bg-destructive text-[10px] leading-4 text-destructive-foreground text-center">
+                {notificationCount}
+              </span>
+            )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80">
+            <DropdownMenuLabel>
+              <div className="flex items-center justify-between">
+                <span>Notifications</span>
+                <span className="text-xs text-muted-foreground">{notificationCount} active</span>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {notifications.length === 0 ? (
+              <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                No alerts right now. Tiny miracle.
+              </div>
+            ) : notifications.map((notification) => (
+              <DropdownMenuItem
+                key={notification.id}
+                onClick={() => router.push(notification.href)}
+                className="items-start gap-3 py-3"
+              >
+                <span className={`mt-1 h-2 w-2 rounded-full ${notification.tone === "danger" ? "bg-destructive" : "bg-warning"}`} />
+                <span className="min-w-0">
+                  <span className="block font-medium">{notification.title}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{notification.description}</span>
+                </span>
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push("/dashboard")}>View dashboard</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <button
-          className="text-muted-foreground hover:text-foreground relative"
-          title={notificationCount ? `${notificationCount} alerts` : "No alerts"}
-          onClick={() => router.push(notificationCount ? "/dashboard" : "/settings")}
+          onClick={() => setTheme(nextTheme)}
+          className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+          title={`Switch to ${nextTheme} mode`}
         >
-          <Icons.notification className="h-5 w-5" />
-          {notificationCount > 0 && (
-            <span className="absolute -top-2 -right-2 min-w-4 h-4 px-1 rounded-full bg-destructive text-[10px] leading-4 text-destructive-foreground text-center">
-              {notificationCount}
-            </span>
-          )}
+          {resolvedTheme === "dark" ? <Icons.sun className="h-5 w-5" /> : <Icons.moon className="h-5 w-5" />}
         </button>
 
         <button
           onClick={() => router.push("/workorders/new")}
-          className="text-muted-foreground hover:text-foreground"
+          className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
           title="Create work order"
         >
           <Icons.add className="h-5 w-5" />
@@ -103,15 +170,15 @@ export function AppHeader() {
           <DropdownMenu>
             <DropdownMenuTrigger className="outline-none">
               <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-                {getInitials(session.user.name)}
+                {getInitials(session.user.name || session.user.email || "US")}
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{session.user.name}</p>
+                  <p className="text-sm font-medium leading-none">{session.user.name || "User Profile"}</p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    {session.user.email}
+                    {session.user.email || "user@billflow.com"}
                   </p>
                 </div>
               </DropdownMenuLabel>
@@ -120,8 +187,8 @@ export function AppHeader() {
                 <Icons.settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push("/settings?tab=users")}>
-                <Icons.customer className="mr-2 h-4 w-4" />
+              <DropdownMenuItem onClick={() => router.push("/settings?tab=profile")}>
+                <Icons.user className="mr-2 h-4 w-4" />
                 <span>User Profile</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

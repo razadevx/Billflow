@@ -2,10 +2,11 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Icons } from "../ui/icons";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
+import { authClient } from "@/lib/auth-client";
 
 const navGroups = [
   {
@@ -36,7 +37,24 @@ const navGroups = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const [user, setUser] = useState<{ name?: string | null; email?: string | null }>({ name: "User Profile", email: "user@billflow.com" });
+  React.useEffect(() => {
+    authClient
+      .getSession()
+      .then((response: any) => {
+        const sessionUser = response?.data?.user || response?.user;
+        if (sessionUser) setUser(sessionUser);
+      })
+      .catch(() => {});
+  }, []);
+  const initials = (user.name || user.email || "US")
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <aside 
@@ -125,20 +143,23 @@ export function AppSidebar() {
         </nav>
       </div>
       
-      <div className={cn(
+      <button
+        type="button"
+        onClick={() => router.push("/settings?tab=profile")}
+        className={cn(
         "p-4 border-t border-sidebar-border transition-all",
-        collapsed ? "flex justify-center" : "flex items-center space-x-3"
+        collapsed ? "flex justify-center hover:bg-sidebar-accent" : "flex items-center space-x-3 text-left hover:bg-sidebar-accent"
       )}>
         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-          <span className="text-primary font-medium text-xs">US</span>
+          <span className="text-primary font-medium text-xs">{initials}</span>
         </div>
         {!collapsed && (
           <div className="flex flex-col overflow-hidden">
-            <span className="text-sm font-medium truncate">User Profile</span>
-            <span className="text-xs text-muted-foreground truncate">user@billflow.com</span>
+            <span className="text-sm font-medium truncate">{user.name || "User Profile"}</span>
+            <span className="text-xs text-muted-foreground truncate">{user.email}</span>
           </div>
         )}
-      </div>
+      </button>
     </aside>
   );
 }

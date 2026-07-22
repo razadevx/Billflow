@@ -24,6 +24,7 @@ type Sequence = { id: string; type: string; lastValue: number; };
 type Invitation = { id: string; email: string; role: string; token: string; expiresAt: string; acceptedAt: string | null; };
 
 export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState("company");
   const [users, setUsers] = useState<User[]>([]);
   const [settings, setSettings] = useState<Setting[]>([]);
   const [company, setCompany] = useState<Company | null>(null);
@@ -103,6 +104,8 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab) setActiveTab(tab === "profile" ? "users" : tab);
     fetchData();
   }, []);
 
@@ -253,7 +256,7 @@ export default function SettingsPage() {
         </Card>
       </div>
       
-      <Tabs defaultValue="company" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-7 mb-8 h-12">
           <TabsTrigger value="company"><Building2 className="w-4 h-4 mr-2 hidden sm:block" /> Company</TabsTrigger>
           <TabsTrigger value="business"><Settings2 className="w-4 h-4 mr-2 hidden sm:block" /> Business</TabsTrigger>

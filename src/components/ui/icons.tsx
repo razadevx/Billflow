@@ -27,6 +27,9 @@ import {
   Wallet,
   TrendingUp,
   BarChart,
+  Moon,
+  Sun,
+  User,
   type LucideIcon
 } from "lucide-react";
 
@@ -63,4 +66,7 @@ export const Icons = {
   wallet: Wallet,
   trend: TrendingUp,
   chart: BarChart,
+  moon: Moon,
+  sun: Sun,
+  user: User,
 };
