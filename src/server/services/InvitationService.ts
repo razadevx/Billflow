@@ -33,7 +33,8 @@ export class InvitationService {
     });
 
     // In local dev, print the link
-    const inviteUrl = `${process.env.BETTER_AUTH_URL || "http://localhost:3000"}/auth/invite/${token}`;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.BETTER_AUTH_URL || "http://localhost:3000";
+    const inviteUrl = `${baseUrl.replace(/\/$/, "")}/auth/invite/${token}`;
     console.log(`\n\n======================================================`);
     console.log(`✉️ INVITATION CREATED FOR: ${email}`);
     console.log(`🔗 INVITATION URL: ${inviteUrl}`);

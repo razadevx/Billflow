@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Trash, Link as LinkIcon, Building2, Settings2, Users as UsersIcon, Mail, Hash, Printer, Info } from "lucide-react";
 import { format, isValid } from "date-fns";
@@ -51,6 +52,11 @@ export default function SettingsPage() {
   // Invitations
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("STAFF");
+
+  // User editing
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editUserName, setEditUserName] = useState("");
+  const [editUserEmail, setEditUserEmail] = useState("");
 
   const fetchData = async () => {
     try {
@@ -159,11 +165,30 @@ export default function SettingsPage() {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, role: newRole })
       });
-      if (!res.ok) throw new Error("Failed to update user");
-      toast.success("Role updated");
+      if (!res.ok) throw new Error(await res.text());
       setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
-    } catch (err) {
-      toast.error("Failed to update role");
+      toast.success("User role updated");
+    } catch (err: any) {
+      toast.error("Failed to update user role");
+    }
+  };
+
+  const updateUserDetails = async () => {
+    if (!editingUser) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/v1/administration/users", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: editingUser.id, name: editUserName, email: editUserEmail })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setUsers(users.map(u => u.id === editingUser.id ? { ...u, name: editUserName, email: editUserEmail } : u));
+      toast.success("User details updated");
+      setEditingUser(null);
+    } catch (err: any) {
+      toast.error("Failed to update user details");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -277,9 +302,6 @@ export default function SettingsPage() {
           <TabsTrigger value="about"><Info className="w-4 h-4 mr-2 hidden sm:block" /> About</TabsTrigger>
         </TabsList>
 
-        {/* ============================================================== */}
-        {/* COMPANY PROFILE TAB */}
-        {/* ============================================================== */}
         <TabsContent value="company">
           <Card className="max-w-2xl shadow-sm border border-border">
             <CardHeader>
@@ -316,9 +338,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* ============================================================== */}
-        {/* BUSINESS SETTINGS TAB */}
-        {/* ============================================================== */}
         <TabsContent value="business" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="shadow-sm border border-border">
@@ -378,9 +397,6 @@ export default function SettingsPage() {
           </div>
         </TabsContent>
 
-        {/* ============================================================== */}
-        {/* USERS TAB */}
-        {/* ============================================================== */}
         <TabsContent value="users">
           <div className="space-y-6">
             <Card className="shadow-sm border border-border">
@@ -430,6 +446,7 @@ export default function SettingsPage() {
                       <TableHead>Email</TableHead>
                       <TableHead>Joined</TableHead>
                       <TableHead>Role</TableHead>
+                      <TableHead className="w-[100px] text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -441,15 +458,28 @@ export default function SettingsPage() {
                         <TableCell>
                           <Select value={user.role} onValueChange={(v) => updateUserRole(user.id, v ?? "STAFF")}>
                             <SelectTrigger className="w-[120px] h-8 text-xs">
-                              <SelectValue />
+                              <SelectValue placeholder="Select role" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="STAFF">STAFF</SelectItem>
-                              <SelectItem value="MANAGER">MANAGER</SelectItem>
-                              <SelectItem value="ADMIN">ADMIN</SelectItem>
                               <SelectItem value="OWNER">OWNER</SelectItem>
+                              <SelectItem value="ADMIN">ADMIN</SelectItem>
+                              <SelectItem value="MANAGER">MANAGER</SelectItem>
+                              <SelectItem value="STAFF">STAFF</SelectItem>
                             </SelectContent>
                           </Select>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => {
+                              setEditUserName(user.name);
+                              setEditUserEmail(user.email);
+                              setEditingUser(user);
+                            }}
+                          >
+                            Edit
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -460,9 +490,6 @@ export default function SettingsPage() {
           </div>
         </TabsContent>
 
-        {/* ============================================================== */}
-        {/* INVITATIONS TAB */}
-        {/* ============================================================== */}
         <TabsContent value="invitations">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="shadow-sm border border-border lg:col-span-1">
@@ -545,9 +572,6 @@ export default function SettingsPage() {
           </div>
         </TabsContent>
 
-        {/* ============================================================== */}
-        {/* NUMBERING TAB */}
-        {/* ============================================================== */}
         <TabsContent value="numbering">
           <Card className="max-w-3xl shadow-sm border border-border">
             <CardHeader>
@@ -596,9 +620,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* ============================================================== */}
-        {/* PRINTING TAB */}
-        {/* ============================================================== */}
         <TabsContent value="printing">
           <Card className="max-w-2xl shadow-sm border border-border">
             <CardHeader>
@@ -647,9 +668,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* ============================================================== */}
-        {/* ABOUT TAB */}
-        {/* ============================================================== */}
         <TabsContent value="about">
           <Card className="max-w-2xl shadow-sm border border-border">
             <CardContent className="pt-6 text-center space-y-4">
@@ -669,6 +687,43 @@ export default function SettingsPage() {
         </TabsContent>
 
       </Tabs>
+
+      {/* Edit User Dialog */}
+      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User Profile</DialogTitle>
+            <DialogDescription>
+              Update the user's name and email address. Note that changing the email address might affect their ability to log in.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Name</Label>
+              <Input 
+                value={editUserName} 
+                onChange={(e) => setEditUserName(e.target.value)} 
+                placeholder="User's full name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input 
+                type="email"
+                value={editUserEmail} 
+                onChange={(e) => setEditUserEmail(e.target.value)} 
+                placeholder="user@example.com"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingUser(null)}>Cancel</Button>
+            <Button onClick={updateUserDetails} disabled={saving}>
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

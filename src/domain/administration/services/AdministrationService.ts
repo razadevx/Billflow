@@ -93,6 +93,21 @@ export class AdministrationService extends BaseService {
     }
   }
 
+  async updateUserDetails(userId: string, data: { name?: string; email?: string }): Promise<Result<User>> {
+    this.requirePermission("users:manage");
+    try {
+      return await TransactionManager.run(async (tx) => {
+        const repo = new UserRepository(tx);
+        const user = await repo.update(userId, this.ctx.companyId, data);
+        await this.logActivity(tx, "USER_DETAILS_UPDATED", { userId, data });
+        return success(user);
+      });
+    } catch (e) {
+      this.logError(`Failed to update user details ${userId}`, e);
+      return failure(e as Error);
+    }
+  }
+
   // --- Company Details ---
   async getCompany(): Promise<Result<Company>> {
     this.requirePermission("settings:read");
