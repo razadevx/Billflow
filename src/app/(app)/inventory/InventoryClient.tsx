@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { InventoryItem } from "@/domain/inventory/types";
+import { formatCurrency } from "@/lib/utils";
 
 import CreateInventoryDialog from "./CreateInventoryDialog";
 import AdjustStockDialog from "./AdjustStockDialog";
@@ -189,8 +190,8 @@ export default function InventoryClient() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">${(item.unitPrice || 0).toFixed(2)} / {item.unit}</TableCell>
-                  <TableCell className="text-right">${((item.unitPrice || 0) * item.currentStock).toFixed(2)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(item.unitPrice || 0)} / {item.unit}</TableCell>
+                  <TableCell className="text-right">{formatCurrency((item.unitPrice || 0) * item.currentStock)}</TableCell>
                   <TableCell>{getStatusBadge(item.status)}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => setAdjustItem(item)}>

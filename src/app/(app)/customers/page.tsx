@@ -7,6 +7,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Icons } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { formatCurrency } from "@/lib/utils";
 
 interface Customer {
   id: string;
@@ -29,7 +30,6 @@ export default function CustomersPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const router = useRouter();
-  const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
   const loadData = () => {
     setLoading(true);
@@ -74,9 +74,9 @@ export default function CustomersPage() {
         return (
           <div>
             <div className={balance > 0 ? "font-semibold text-warning" : "font-semibold text-success"}>
-              {currency.format(balance)}
+              {formatCurrency(balance)}
             </div>
-            <div className="text-xs text-muted-foreground">Limit {currency.format(info.row.original.creditLimit || 0)}</div>
+            <div className="text-xs text-muted-foreground">Limit {formatCurrency(info.row.original.creditLimit || 0)}</div>
           </div>
         );
       }

@@ -6,6 +6,7 @@ import { fetchReportData } from "./actions";
 import { Download, FileText, Loader2, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/utils";
 
 const TABS = [
   { id: "executive", label: "Executive Dashboard" },
@@ -103,15 +104,15 @@ export default function ReportsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">${data.totalRevenue?.toFixed(2)}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold">{formatCurrency(data.totalRevenue || 0)}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Payments Received</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-green-600">${data.paymentsReceived?.toFixed(2)}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold text-green-600">{formatCurrency(data.paymentsReceived || 0)}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Outstanding</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-destructive">${data.outstandingReceivables?.toFixed(2)}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold text-destructive">{formatCurrency(data.outstandingReceivables || 0)}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Active Work Orders</CardTitle></CardHeader>
@@ -123,7 +124,7 @@ export default function ReportsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Inventory Value</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">${data.inventoryValue?.toFixed(2)}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold">{formatCurrency(data.inventoryValue || 0)}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Low Stock Items</CardTitle></CardHeader>
@@ -198,7 +199,7 @@ export default function ReportsPage() {
               {Object.entries(data.summary).map(([key, val]) => (
                 <Card key={key}>
                   <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</CardTitle></CardHeader>
-                  <CardContent><div className="text-xl font-bold">{typeof val === 'number' && key.toLowerCase().includes('total') && !key.toLowerCase().includes('sqft') ? '$' + val.toFixed(2) : String(val)}</div></CardContent>
+                  <CardContent><div className="text-xl font-bold">{typeof val === 'number' && key.toLowerCase().includes('total') && !key.toLowerCase().includes('sqft') ? formatCurrency(val) : String(val)}</div></CardContent>
                 </Card>
               ))}
             </div>
@@ -230,7 +231,7 @@ export default function ReportsPage() {
                           else if (typeof val === 'object') displayVal = JSON.stringify(val);
                           else if (typeof val === 'number' && (k.toLowerCase().includes('price') || k.toLowerCase().includes('revenue') || k.toLowerCase().includes('total') || k.toLowerCase().includes('amount') || k.toLowerCase().includes('valuation') || k.toLowerCase().includes('outstanding'))) {
                             if (!k.toLowerCase().includes('sqft') && !k.toLowerCase().includes('orders')) {
-                              displayVal = '$' + val.toFixed(2);
+                              displayVal = formatCurrency(val);
                             }
                           }
                           else if (k.toLowerCase().includes('date') || k.toLowerCase().includes('createdat')) {

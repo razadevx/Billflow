@@ -1,5 +1,6 @@
 import { Result, success, failure } from "@/server/core/Result";
 import { RequestContext } from "@/server/core/RequestContext";
+import { db } from "@/server/db";
 
 export interface SearchResult {
   id: string;
@@ -25,15 +26,122 @@ export class GlobalSearchService {
     try {
       const results: SearchResult[] = [];
 
-      // Phase 5: Implement Customer Search
-      // In the future, this will fan out to multiple services (e.g. InventoryService.search(), WorkOrderService.search())
-      // For now, we will just prepare the architecture. 
-      // The actual implementation will be injected or called from here once CustomerService is ready.
-      
-      // const customerResults = await this.customerService.search(query, this.context);
-      // results.push(...customerResults);
+      const term = query.trim();
+      const companyId = this.context.companyId;
 
-      // Return unified results
+      const [customers, workOrders, invoices, payments, inventory] = await Promise.all([
+        db.customer.findMany({
+          where: {
+            companyId,
+            deletedAt: null,
+            OR: [
+              { name: { contains: term, mode: "insensitive" } },
+              { phone: { contains: term, mode: "insensitive" } },
+              { email: { contains: term, mode: "insensitive" } },
+              { customerCode: { contains: term, mode: "insensitive" } },
+            ],
+          },
+          take: 5,
+          orderBy: { updatedAt: "desc" },
+        }),
+        db.workOrder.findMany({
+          where: {
+            companyId,
+            deletedAt: null,
+            OR: [
+              { orderNumber: { contains: term, mode: "insensitive" } },
+              { title: { contains: term, mode: "insensitive" } },
+              { customer: { name: { contains: term, mode: "insensitive" } } },
+            ],
+          },
+          include: { customer: { select: { name: true } } },
+          take: 5,
+          orderBy: { updatedAt: "desc" },
+        }),
+        db.invoice.findMany({
+          where: {
+            companyId,
+            deletedAt: null,
+            OR: [
+              { invoiceNumber: { contains: term, mode: "insensitive" } },
+              { customer: { name: { contains: term, mode: "insensitive" } } },
+            ],
+          },
+          include: { customer: { select: { name: true } } },
+          take: 5,
+          orderBy: { updatedAt: "desc" },
+        }),
+        db.payment.findMany({
+          where: {
+            companyId,
+            deletedAt: null,
+            OR: [
+              { receiptNumber: { contains: term, mode: "insensitive" } },
+              { referenceNumber: { contains: term, mode: "insensitive" } },
+              { customer: { name: { contains: term, mode: "insensitive" } } },
+            ],
+          },
+          include: { customer: { select: { name: true } } },
+          take: 5,
+          orderBy: { paymentDate: "desc" },
+        }),
+        db.inventoryItem.findMany({
+          where: {
+            companyId,
+            deletedAt: null,
+            OR: [
+              { name: { contains: term, mode: "insensitive" } },
+              { sku: { contains: term, mode: "insensitive" } },
+            ],
+          },
+          take: 5,
+          orderBy: { updatedAt: "desc" },
+        }),
+      ]);
+
+      results.push(
+        ...customers.map((customer) => ({
+          id: customer.id,
+          title: customer.name,
+          subtitle: [customer.customerCode, customer.phone].filter(Boolean).join(" · "),
+          type: "CUSTOMER" as const,
+          icon: "customer",
+          url: `/customers/${customer.id}`,
+        })),
+        ...workOrders.map((workOrder) => ({
+          id: workOrder.id,
+          title: `${workOrder.orderNumber} — ${workOrder.title}`,
+          subtitle: `${workOrder.customer?.name || "No customer"} · ${workOrder.status}`,
+          type: "WORK_ORDER" as const,
+          icon: "workOrder",
+          url: `/workorders/${workOrder.id}`,
+        })),
+        ...invoices.map((invoice) => ({
+          id: invoice.id,
+          title: `Invoice ${invoice.invoiceNumber}`,
+          subtitle: `${invoice.customer?.name || "No customer"} · ${invoice.status}`,
+          type: "INVOICE" as const,
+          icon: "invoice",
+          url: `/invoices/${invoice.id}`,
+        })),
+        ...payments.map((payment) => ({
+          id: payment.id,
+          title: `Payment ${payment.receiptNumber || payment.referenceNumber || payment.id.slice(0, 8)}`,
+          subtitle: `${payment.customer?.name || "No customer"} · ${payment.method}`,
+          type: "PAYMENT" as const,
+          icon: "payment",
+          url: `/payments`,
+        })),
+        ...inventory.map((item) => ({
+          id: item.id,
+          title: item.name,
+          subtitle: [item.sku, `${item.availableQuantity} ${item.unit} available`].filter(Boolean).join(" · "),
+          type: "INVENTORY" as const,
+          icon: "inventory",
+          url: `/inventory/${item.id}`,
+        })),
+      );
+
       return success(results);
     } catch (error) {
       return failure(error instanceof Error ? error : new Error("Global search failed"));

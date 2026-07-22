@@ -6,6 +6,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { ArrowUpRight, ArrowDownRight, Eye, User } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
+import { formatCurrency } from "@/lib/utils";
 
 export default function KhataListClient() {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -59,7 +60,7 @@ export default function KhataListClient() {
                 <div className="flex justify-between items-end mt-4">
                   <div>
                     <div className={`text-2xl font-bold ${customer.balance > 0 ? 'text-red-600' : customer.balance < 0 ? 'text-green-600' : ''}`}>
-                      ${Math.abs(customer.balance).toFixed(2)}
+                      {formatCurrency(Math.abs(customer.balance))}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 flex items-center">
                       {customer.balance > 0 ? (
@@ -75,6 +76,11 @@ export default function KhataListClient() {
                     <Eye className="mr-2 h-4 w-4" />
                     View
                   </Link>
+                  {customer.balance > 0 && (
+                    <Link href={`/payments/new?customerId=${customer.id}&amount=${customer.balance}`} className={buttonVariants({ variant: "default", size: "sm" })}>
+                      Pay
+                    </Link>
+                  )}
                 </div>
               </CardContent>
             </Card>

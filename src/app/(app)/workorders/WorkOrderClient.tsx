@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatCurrency } from "@/lib/utils";
 
 export default function WorkOrderClient() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -123,7 +124,7 @@ export default function WorkOrderClient() {
                   <TableCell>{wo.customer?.name || "Unknown"}</TableCell>
                   <TableCell>{format(new Date(wo.createdAt), "MMM d, yyyy")}</TableCell>
                   <TableCell>{getStatusBadge(wo.status)}</TableCell>
-                  <TableCell className="text-right">${(wo.total || 0).toFixed(2)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(wo.total || 0)}</TableCell>
                   <TableCell className="text-right">
                     <Link href={`/workorders/${wo.id}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
                       View

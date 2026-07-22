@@ -12,6 +12,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { formatCurrency } from "@/lib/utils";
 
 export default function WorkOrderDetailClient({ idPromise }: { idPromise: Promise<{ id: string }> }) {
   const params = use(idPromise);
@@ -149,6 +150,12 @@ export default function WorkOrderDetailClient({ idPromise }: { idPromise: Promis
           <Button variant="outline" onClick={() => router.push(`/workorders/${wo.id}/print`)}>
             <Printer className="mr-2 h-4 w-4" /> Print
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/payments/new?customerId=${wo.customerId}&workOrderId=${wo.id}&amount=${wo.total}`)}
+          >
+            Receive Payment
+          </Button>
           
           {wo.invoices?.length === 0 && (
              <Button variant="outline" onClick={() => invoiceMutation.mutate()} disabled={invoiceMutation.isPending}>
@@ -226,8 +233,8 @@ export default function WorkOrderDetailClient({ idPromise }: { idPromise: Promis
                           {li.description}
                         </td>
                         <td className="p-3 text-right">{li.quantity}</td>
-                        <td className="p-3 text-right">${li.unitPrice.toFixed(2)}</td>
-                        <td className="p-3 text-right font-medium">${li.total.toFixed(2)}</td>
+                        <td className="p-3 text-right">{formatCurrency(li.unitPrice)}</td>
+                        <td className="p-3 text-right font-medium">{formatCurrency(li.total)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -235,9 +242,9 @@ export default function WorkOrderDetailClient({ idPromise }: { idPromise: Promis
               </div>
               <div className="flex justify-end mt-4">
                 <div className="w-48 space-y-2 text-sm">
-                  <div className="flex justify-between"><span>Subtotal:</span><span>${wo.subtotal.toFixed(2)}</span></div>
-                  <div className="flex justify-between"><span>Tax:</span><span>${wo.tax.toFixed(2)}</span></div>
-                  <div className="flex justify-between font-bold text-lg border-t pt-2 text-primary"><span>Total:</span><span>${wo.total.toFixed(2)}</span></div>
+                  <div className="flex justify-between"><span>Subtotal:</span><span>{formatCurrency(wo.subtotal)}</span></div>
+                  <div className="flex justify-between"><span>Tax:</span><span>{formatCurrency(wo.tax)}</span></div>
+                  <div className="flex justify-between font-bold text-lg border-t pt-2 text-primary"><span>Total:</span><span>{formatCurrency(wo.total)}</span></div>
                 </div>
               </div>
             </CardContent>
@@ -315,7 +322,7 @@ export default function WorkOrderDetailClient({ idPromise }: { idPromise: Promis
                 wo.invoices.map((inv: any) => (
                   <Link key={inv.id} href={`/invoices/${inv.id}`} className="block p-3 border rounded hover:bg-slate-50 text-sm">
                     <div className="font-medium text-blue-600">Invoice #{inv.invoiceNumber}</div>
-                    <div className="text-muted-foreground mt-1">${inv.total.toFixed(2)} • {inv.status}</div>
+                    <div className="text-muted-foreground mt-1">{formatCurrency(inv.total)} • {inv.status}</div>
                   </Link>
                 ))
               ) : (

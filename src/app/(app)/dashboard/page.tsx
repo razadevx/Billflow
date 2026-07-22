@@ -12,6 +12,7 @@ import { Icons } from "@/components/ui/icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
 import { DashboardData } from "@/domain/dashboard.service";
+import { formatCurrency } from "@/lib/utils";
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -73,7 +74,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
             <MetricCard 
               title="Revenue"
-              value={`$${(data?.kpis.totalRevenue || 0).toFixed(2)}`}
+              value={formatCurrency(data?.kpis.totalRevenue || 0)}
               icon={Icons.dollar}
               accentColor="success"
               trend={0}
@@ -83,7 +84,7 @@ export default function DashboardPage() {
             />
             <MetricCard 
               title="Outstanding Balance"
-              value={`$${(data?.kpis.outstandingBalance || 0).toFixed(2)}`}
+              value={formatCurrency(data?.kpis.outstandingBalance || 0)}
               icon={Icons.wallet}
               accentColor="danger"
               className="animate-slide-up"
@@ -107,7 +108,7 @@ export default function DashboardPage() {
             />
             <MetricCard 
               title="Stock Valuation"
-              value={`$${(data?.kpis.stockValuation || 0).toFixed(2)}`}
+              value={formatCurrency(data?.kpis.stockValuation || 0)}
               icon={Icons.wallet}
               accentColor="success"
               className="animate-slide-up"

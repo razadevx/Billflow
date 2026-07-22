@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SquareFootCalculator } from "@/domain/workorder/square-foot-calculator";
+import { formatCurrency } from "@/lib/utils";
 
 export default function CreateWorkOrderClient({ initialCustomerId = "" }: { initialCustomerId?: string }) {
   const router = useRouter();
@@ -221,7 +222,7 @@ export default function CreateWorkOrderClient({ initialCustomerId = "" }: { init
         <div className={`rounded-xl border p-4 ${lineItems.every((li) => li.description.trim()) ? "border-primary/40 bg-primary/10" : "bg-card"}`}>
           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Step 3</div>
           <div className="mt-1 font-semibold">Price line items</div>
-          <div className="text-sm text-muted-foreground">{lineItems.length} item(s), ${subtotal.toFixed(2)}</div>
+          <div className="text-sm text-muted-foreground">{lineItems.length} item(s), {formatCurrency(subtotal)}</div>
         </div>
       </div>
 
@@ -306,12 +307,12 @@ export default function CreateWorkOrderClient({ initialCustomerId = "" }: { init
                     </div>
                     {li.isSqFt ? (
                       <div className="space-y-2">
-                        <Label>Rate ($ / sqft)</Label>
+                        <Label>Rate (PKR / sqft)</Label>
                         <Input type="number" min="0" step="0.01" value={li.rate} onChange={e => updateLineItem(li.id, "rate", parseFloat(e.target.value) || 0)} />
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <Label>Unit Price ($)</Label>
+                        <Label>Unit Price (PKR)</Label>
                         <Input type="number" min="0" step="0.01" value={li.unitPrice} onChange={e => updateLineItem(li.id, "unitPrice", parseFloat(e.target.value) || 0)} />
                       </div>
                     )}
@@ -370,12 +371,12 @@ export default function CreateWorkOrderClient({ initialCustomerId = "" }: { init
             <CardContent className="space-y-4">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>{formatCurrency(subtotal)}</span>
               </div>
               {/* Simplified Tax for MVP - assumed 0% unless specified per line item */}
               <div className="flex justify-between font-bold text-lg pt-4 border-t">
                 <span>Total</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>{formatCurrency(subtotal)}</span>
               </div>
 
               {!canCreate && (

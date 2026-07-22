@@ -23,6 +23,12 @@ export function CommandPalette() {
   });
 
   useEffect(() => {
+    const openPalette = () => setOpen(true);
+    window.addEventListener("billflow:open-command-palette", openPalette);
+    return () => window.removeEventListener("billflow:open-command-palette", openPalette);
+  }, []);
+
+  useEffect(() => {
     const fetchSearchResults = async (query: string) => {
       if (query.trim().length < 2) {
         setResults([]);

@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { getRequestContext } from "@/server/core/context";
 import { Printer } from "lucide-react";
 import { AdministrationService } from "@/domain/administration/services/AdministrationService";
+import { formatCurrency } from "@/lib/utils";
 
 export default async function PrintWorkOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getRequestContext();
@@ -108,8 +109,8 @@ export default async function PrintWorkOrderPage({ params }: { params: Promise<{
                 <tr key={li.id} className="border-b border-slate-200">
                   <td className="py-3 px-2 font-medium">{li.description}</td>
                   <td className="py-3 px-2 text-right">{li.quantity}</td>
-                  <td className="py-3 px-2 text-right">${li.unitPrice.toFixed(2)}</td>
-                  <td className="py-3 px-2 text-right font-bold">${li.total.toFixed(2)}</td>
+                  <td className="py-3 px-2 text-right">{formatCurrency(li.unitPrice)}</td>
+                  <td className="py-3 px-2 text-right font-bold">{formatCurrency(li.total)}</td>
                 </tr>
               ))}
             </tbody>
@@ -121,22 +122,22 @@ export default async function PrintWorkOrderPage({ params }: { params: Promise<{
           <div className="w-64">
             <div className="flex justify-between py-2 border-b">
               <span className="font-bold text-slate-500">Subtotal:</span>
-              <span>${wo.subtotal.toFixed(2)}</span>
+              <span>{formatCurrency(wo.subtotal)}</span>
             </div>
             {printTax && (
               <div className="flex justify-between py-2 border-b">
                 <span className="font-bold text-slate-500">Tax:</span>
-                <span>${wo.tax.toFixed(2)}</span>
+                <span>{formatCurrency(wo.tax)}</span>
               </div>
             )}
             <div className="flex justify-between py-3 border-b-2 border-black">
               <span className="font-black text-xl">Total:</span>
-              <span className="font-black text-xl">${wo.total.toFixed(2)}</span>
+              <span className="font-black text-xl">{formatCurrency(wo.total)}</span>
             </div>
             {printBalance && (
               <div className="flex justify-between py-2 mt-2">
                 <span className="font-bold text-red-500">Balance Due:</span>
-                <span className="font-bold text-red-500">${wo.total.toFixed(2)}</span>
+                <span className="font-bold text-red-500">{formatCurrency(wo.total)}</span>
               </div>
             )}
           </div>

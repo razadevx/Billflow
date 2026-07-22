@@ -4,11 +4,11 @@ import React, { useEffect, useState } from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
+import { formatCurrency } from "@/lib/utils";
 
 export function CustomerOrders({ customerId }: { customerId: string }) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
   useEffect(() => {
     setLoading(true);
@@ -37,7 +37,7 @@ export function CustomerOrders({ customerId }: { customerId: string }) {
     {
       header: "Amount",
       accessorKey: "total",
-      cell: (info: any) => currency.format(Number(info.getValue() || 0))
+      cell: (info: any) => formatCurrency(Number(info.getValue() || 0))
     },
     { 
       header: "Status", 

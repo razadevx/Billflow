@@ -6,6 +6,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Plus, ArrowLeftRight, XCircle } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/lib/utils";
 
 export default function PaymentListClient() {
   const [payments, setPayments] = useState<any[]>([]);
@@ -98,7 +99,7 @@ export default function PaymentListClient() {
                   </div>
                   <div className="text-right flex items-center space-x-4">
                     <div>
-                      <div className="font-bold text-lg">${payment.amount.toFixed(2)}</div>
+                      <div className="font-bold text-lg">{formatCurrency(payment.amount)}</div>
                       <Badge variant={payment.status === 'REFUNDED' ? 'destructive' : 'default'} className="mt-1">
                         {payment.status}
                       </Badge>

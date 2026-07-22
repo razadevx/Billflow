@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Icons } from "../ui/icons";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -20,6 +20,7 @@ export function AppHeader() {
   const { setTheme, theme } = useTheme();
   // const { data: session } = authClient.useSession();
   const session = { user: { name: "Mock User", email: "mock@example.com" } };
+  const [notificationCount, setNotificationCount] = useState(0);
   // Simple Breadcrumb logic based on pathname
   const segments = pathname.split("/").filter(Boolean);
 
@@ -37,6 +38,17 @@ export function AppHeader() {
     await authClient.signOut();
     router.push("/auth/login");
   };
+
+  useEffect(() => {
+    fetch("/api/dashboard")
+      .then((res) => res.ok ? res.json() : null)
+      .then((json) => {
+        const data = json?.data;
+        const count = (data?.lowStockItems?.length || 0) + (data?.outstandingCustomers?.length || 0);
+        setNotificationCount(count);
+      })
+      .catch(() => setNotificationCount(0));
+  }, []);
 
   return (
     <header className="print:hidden h-14 bg-background border-b border-border flex items-center justify-between px-6 flex-shrink-0">
@@ -56,15 +68,27 @@ export function AppHeader() {
       </div>
 
       <div className="flex items-center space-x-4">
-        <div className="hidden sm:flex items-center text-sm text-muted-foreground bg-muted px-3 py-1.5 rounded-md cursor-pointer hover:text-foreground">
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event("billflow:open-command-palette"))}
+          className="hidden sm:flex items-center text-sm text-muted-foreground bg-muted px-3 py-1.5 rounded-md cursor-pointer hover:text-foreground"
+        >
           <Icons.search className="mr-2 h-4 w-4" />
           <span>Search...</span>
           <kbd className="ml-4 font-mono text-[10px] bg-background px-1.5 rounded border border-border">Ctrl K</kbd>
-        </div>
+        </button>
         
-        <button className="text-muted-foreground hover:text-foreground relative">
+        <button
+          className="text-muted-foreground hover:text-foreground relative"
+          title={notificationCount ? `${notificationCount} alerts` : "No alerts"}
+          onClick={() => router.push(notificationCount ? "/dashboard" : "/settings")}
+        >
           <Icons.notification className="h-5 w-5" />
-          <span className="absolute top-0 right-0 h-2 w-2 bg-destructive rounded-full" />
+          {notificationCount > 0 && (
+            <span className="absolute -top-2 -right-2 min-w-4 h-4 px-1 rounded-full bg-destructive text-[10px] leading-4 text-destructive-foreground text-center">
+              {notificationCount}
+            </span>
+          )}
         </button>
 
         <button
@@ -95,6 +119,10 @@ export function AppHeader() {
               <DropdownMenuItem onClick={() => router.push("/settings")}>
                 <Icons.settings className="mr-2 h-4 w-4" />
                 <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/settings?tab=users")}>
+                <Icons.customer className="mr-2 h-4 w-4" />
+                <span>User Profile</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">

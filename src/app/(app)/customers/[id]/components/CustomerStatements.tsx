@@ -3,11 +3,11 @@
 import React, { useEffect, useState } from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { formatCurrency } from "@/lib/utils";
 
 export function CustomerStatements({ customerId, mode = "ledger" }: { customerId: string; mode?: "ledger" | "payments" }) {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
   useEffect(() => {
     setLoading(true);
@@ -23,7 +23,7 @@ export function CustomerStatements({ customerId, mode = "ledger" }: { customerId
     { header: "Date", accessorKey: "paymentDate", cell: (info: any) => new Date(info.getValue()).toLocaleDateString() },
     { header: "Method", accessorKey: "method" },
     { header: "Work Order", accessorKey: "workOrder.orderNumber", cell: (info: any) => info.row.original.workOrder?.orderNumber || "—" },
-    { header: "Amount", accessorKey: "amount", cell: (info: any) => currency.format(Number(info.getValue() || 0)) },
+    { header: "Amount", accessorKey: "amount", cell: (info: any) => formatCurrency(Number(info.getValue() || 0)) },
     { header: "Status", accessorKey: "status", cell: (info: any) => <StatusBadge variant="info">{info.getValue()}</StatusBadge> },
   ] : [
     { header: "Date", accessorKey: "date", cell: (info: any) => new Date(info.getValue()).toLocaleDateString() },
@@ -31,8 +31,8 @@ export function CustomerStatements({ customerId, mode = "ledger" }: { customerId
     { header: "Description", accessorKey: "description" },
     { header: "Invoice", accessorKey: "invoice.invoiceNumber", cell: (info: any) => info.row.original.invoice?.invoiceNumber || "—" },
     { header: "Payment", accessorKey: "payment.receiptNumber", cell: (info: any) => info.row.original.payment?.receiptNumber || "—" },
-    { header: "Amount", accessorKey: "amount", cell: (info: any) => currency.format(Number(info.getValue() || 0)) },
-    { header: "Balance", accessorKey: "runningBalance", cell: (info: any) => info.getValue() == null ? "—" : currency.format(Number(info.getValue())) },
+    { header: "Amount", accessorKey: "amount", cell: (info: any) => formatCurrency(Number(info.getValue() || 0)) },
+    { header: "Balance", accessorKey: "runningBalance", cell: (info: any) => info.getValue() == null ? "—" : formatCurrency(Number(info.getValue())) },
   ];
 
   return (

@@ -37,8 +37,8 @@ export default function SettingsPage() {
   const [companyForm, setCompanyForm] = useState<Partial<Company>>({});
   
   // Settings forms
-  const [sGeneral, setSGeneral] = useState({ COMPANY_LOGO: "", TIMEZONE: "UTC", DATE_FORMAT: "PPP", CURRENCY: "USD", CURRENCY_SYMBOL: "$" });
-  const [sFinancial, setSFinancial] = useState({ DEFAULT_TAX_RATE: "0", INVOICE_DUE_DAYS: "30", DECIMAL_PRECISION: "2", NUMBER_FORMAT: "en-US" });
+  const [sGeneral, setSGeneral] = useState({ COMPANY_LOGO: "", TIMEZONE: "Asia/Karachi", DATE_FORMAT: "PPP", CURRENCY: "PKR", CURRENCY_SYMBOL: "Rs" });
+  const [sFinancial, setSFinancial] = useState({ DEFAULT_TAX_RATE: "0", INVOICE_DUE_DAYS: "30", DECIMAL_PRECISION: "0", NUMBER_FORMAT: "en-PK" });
   const [sPrinting, setSPrinting] = useState({ PRINT_LOGO: "true", PRINT_TAX: "true", PRINT_BALANCE: "true", PRINT_PAPER_SIZE: "A4", PRINT_FOOTER: "Thank you for your business!" });
 
   // Invitations
@@ -74,17 +74,17 @@ export default function SettingsPage() {
       
       setSGeneral({
         COMPANY_LOGO: getS("COMPANY_LOGO", ""),
-        TIMEZONE: getS("TIMEZONE", "UTC"),
+        TIMEZONE: getS("TIMEZONE", "Asia/Karachi"),
         DATE_FORMAT: getS("DATE_FORMAT", "PPP"),
-        CURRENCY: getS("CURRENCY", "USD"),
-        CURRENCY_SYMBOL: getS("CURRENCY_SYMBOL", "$"),
+        CURRENCY: getS("CURRENCY", "PKR"),
+        CURRENCY_SYMBOL: getS("CURRENCY_SYMBOL", "Rs"),
       });
 
       setSFinancial({
         DEFAULT_TAX_RATE: getS("DEFAULT_TAX_RATE", "0"),
         INVOICE_DUE_DAYS: getS("INVOICE_DUE_DAYS", "30"),
-        DECIMAL_PRECISION: getS("DECIMAL_PRECISION", "2"),
-        NUMBER_FORMAT: getS("NUMBER_FORMAT", "en-US"),
+        DECIMAL_PRECISION: getS("DECIMAL_PRECISION", "0"),
+        NUMBER_FORMAT: getS("NUMBER_FORMAT", "en-PK"),
       });
 
       setSPrinting({
@@ -228,7 +228,30 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 pb-20">
-      <PageHeader title="Administration" description="Manage company profile, business rules, users, and core settings." />
+      <PageHeader title="Settings" description="Manage company profile, currency, users, numbering, and print rules." />
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="text-base">Currency</CardTitle>
+            <CardDescription>Amounts display across the app as Pakistani Rupees.</CardDescription>
+          </CardHeader>
+          <CardContent className="text-2xl font-bold">{sGeneral.CURRENCY_SYMBOL} · {sGeneral.CURRENCY}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Users</CardTitle>
+            <CardDescription>Active users and invitations.</CardDescription>
+          </CardHeader>
+          <CardContent className="text-2xl font-bold">{users.length} users</CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Numbering</CardTitle>
+            <CardDescription>Customer, work order, invoice, and receipt sequences.</CardDescription>
+          </CardHeader>
+          <CardContent className="text-2xl font-bold">{sequences.length} sequences</CardContent>
+        </Card>
+      </div>
       
       <Tabs defaultValue="company" className="w-full">
         <TabsList className="grid w-full grid-cols-7 mb-8 h-12">
@@ -330,9 +353,9 @@ export default function SettingsPage() {
                   <Select value={sFinancial.DECIMAL_PRECISION} onValueChange={v => setSFinancial({...sFinancial, DECIMAL_PRECISION: v ?? "2"})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="0">0 (e.g. $100)</SelectItem>
-                      <SelectItem value="2">2 (e.g. $100.50)</SelectItem>
-                      <SelectItem value="3">3 (e.g. $100.500)</SelectItem>
+                      <SelectItem value="0">0 (e.g. Rs 1,000)</SelectItem>
+                      <SelectItem value="2">2 (e.g. Rs 1,000.50)</SelectItem>
+                      <SelectItem value="3">3 (e.g. Rs 1,000.500)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

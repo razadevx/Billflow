@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import AdjustStockDialog from "../AdjustStockDialog";
+import { formatCurrency } from "@/lib/utils";
 
 export default function InventoryDetailClient({ id }: { id: string }) {
   const queryClient = useQueryClient();
@@ -112,8 +113,8 @@ export default function InventoryDetailClient({ id }: { id: string }) {
             <CardTitle className="text-sm font-medium">Stock Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${((item.unitPrice || 0) * item.currentStock).toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">@ ${(item.unitPrice || 0).toFixed(2)} per {item.unit}</p>
+            <div className="text-2xl font-bold">{formatCurrency((item.unitPrice || 0) * item.currentStock)}</div>
+            <p className="text-xs text-muted-foreground">@ {formatCurrency(item.unitPrice || 0)} per {item.unit}</p>
           </CardContent>
         </Card>
         <Card>

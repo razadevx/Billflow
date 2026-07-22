@@ -129,12 +129,12 @@ export default function ReceivePaymentClient({
               <div className="grid gap-2">
                 <Label htmlFor="amount">Amount *</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
+                  <span className="absolute left-3 top-2.5 text-muted-foreground">Rs</span>
                   <Input 
                     id="amount" 
                     type="number" 
                     step="0.01" 
-                    className="pl-7" 
+                    className="pl-9" 
                     placeholder="0.00" 
                     value={formData.amount}
                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })}

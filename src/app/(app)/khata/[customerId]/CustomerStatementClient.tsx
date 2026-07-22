@@ -6,6 +6,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { ArrowLeft, FileText, ArrowUpRight, ArrowDownRight, CreditCard, Receipt } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/lib/utils";
 
 export default function CustomerStatementClient({ customerId }: { customerId: string }) {
   const [statement, setStatement] = useState<any>(null);
@@ -42,6 +43,11 @@ export default function CustomerStatementClient({ customerId }: { customerId: st
             <FileText className="mr-2 h-4 w-4" />
             Export PDF
           </Button>
+          {statement.currentBalance > 0 && (
+            <Link href={`/payments/new?customerId=${customerId}&amount=${statement.currentBalance}`} className={buttonVariants({ variant: "default" })}>
+              Receive Payment
+            </Link>
+          )}
         </div>
       </div>
 
@@ -52,7 +58,7 @@ export default function CustomerStatementClient({ customerId }: { customerId: st
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${statement.currentBalance.toFixed(2)}
+              {formatCurrency(statement.currentBalance)}
             </div>
             <p className="text-xs text-muted-foreground">
               {statement.currentBalance > 0 ? "Customer owes you" : statement.currentBalance < 0 ? "You owe customer" : "Settled"}
@@ -92,11 +98,11 @@ export default function CustomerStatementClient({ customerId }: { customerId: st
                   </div>
                   <div className="text-right">
                     <div className={`font-medium ${entry.type === 'DEBIT' ? 'text-red-600' : 'text-green-600'}`}>
-                      {entry.type === 'DEBIT' ? '+' : '-'}${entry.amount.toFixed(2)}
+                      {entry.type === 'DEBIT' ? '+' : '-'}{formatCurrency(entry.amount)}
                     </div>
                     {entry.runningBalance !== null && (
                       <div className="text-xs text-muted-foreground">
-                        Bal: ${entry.runningBalance.toFixed(2)}
+                        Bal: {formatCurrency(entry.runningBalance)}
                       </div>
                     )}
                   </div>
