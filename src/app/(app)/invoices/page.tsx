@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { DashboardContainer } from "@/components/layout/DashboardContainer";
 import { PageHeader } from "@/components/layout/PageLayout";
 import { DataTable } from "@/components/shared/DataTable";
@@ -10,20 +10,19 @@ import { Icons } from "@/components/ui/icons";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import { InvoiceStatus } from "@prisma/client";
+import { useQuery } from "@tanstack/react-query";
 
 export default function InvoicesPage() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    fetch("/api/v1/invoices")
-      .then(res => res.json())
-      .then(json => {
-        setData(json.data || []);
-        setLoading(false);
-      });
-  }, []);
+  const { data = [], isLoading: loading } = useQuery({
+    queryKey: ["invoices"],
+    queryFn: async () => {
+      const res = await fetch("/api/v1/invoices");
+      if (!res.ok) throw new Error("Failed to fetch invoices");
+      return res.json().then(json => json.data || []);
+    }
+  });
 
   const columns = [
     {

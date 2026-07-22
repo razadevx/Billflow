@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import { formatCurrency } from "@/lib/utils";
 
 export default function CreateWorkOrderClient({ initialCustomerId = "" }: { initialCustomerId?: string }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [customerId, setCustomerId] = useState(initialCustomerId);
   const [title, setTitle] = useState("");
@@ -72,6 +73,8 @@ export default function CreateWorkOrderClient({ initialCustomerId = "" }: { init
       return res.json();
     },
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["workorders"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       toast.success("Work order created!");
       router.push(`/workorders/${data.id}`);
     },

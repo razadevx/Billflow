@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ArrowLeft, FileText, ArrowUpRight, ArrowDownRight, CreditCard, Receipt } from "lucide-react";
@@ -9,17 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 
 export default function CustomerStatementClient({ customerId }: { customerId: string }) {
-  const [statement, setStatement] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch(`/api/v1/khata/${customerId}`)
-      .then(res => res.json())
-      .then(data => {
-        setStatement(data);
-        setLoading(false);
-      });
-  }, [customerId]);
+  const { data: statement, isLoading: loading } = useQuery({
+    queryKey: ["khata", customerId],
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/khata/${customerId}`);
+      if (!res.ok) throw new Error("Failed to load statement");
+      return res.json();
+    }
+  });
 
   if (loading) {
     return <div className="p-8">Loading statement...</div>;

@@ -1,22 +1,22 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 
 export function CustomerOrders({ customerId }: { customerId: string }) {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    fetch(`/api/v1/workorders?customerId=${customerId}`)
-      .then((res) => res.json())
-      .then((orders) => setData(Array.isArray(orders) ? orders : []))
-      .finally(() => setLoading(false));
-  }, [customerId]);
+  const { data = [], isLoading: loading } = useQuery({
+    queryKey: ["workorders", { customerId }],
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/workorders?customerId=${customerId}`);
+      if (!res.ok) throw new Error("Failed to fetch orders");
+      const orders = await res.json();
+      return Array.isArray(orders) ? orders : [];
+    }
+  });
 
   const columns = [
     {

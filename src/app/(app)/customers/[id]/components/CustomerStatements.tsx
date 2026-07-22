@@ -1,22 +1,22 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatCurrency } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 
 export function CustomerStatements({ customerId, mode = "ledger" }: { customerId: string; mode?: "ledger" | "payments" }) {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    const url = mode === "payments" ? `/api/v1/payments?customerId=${customerId}` : `/api/customers/${customerId}/ledger`;
-    fetch(url)
-      .then((res) => res.json())
-      .then((rows) => setData(Array.isArray(rows) ? rows : []))
-      .finally(() => setLoading(false));
-  }, [customerId, mode]);
+  const { data = [], isLoading: loading } = useQuery({
+    queryKey: [mode === "payments" ? "payments" : "ledger", { customerId }],
+    queryFn: async () => {
+      const url = mode === "payments" ? `/api/v1/payments?customerId=${customerId}` : `/api/customers/${customerId}/ledger`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch data");
+      const rows = await res.json();
+      return Array.isArray(rows) ? rows : [];
+    }
+  });
 
   const columns = mode === "payments" ? [
     { header: "Receipt", accessorKey: "receiptNumber" },

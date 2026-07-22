@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function ReceivePaymentClient({
   initialCustomerId = "",
@@ -30,8 +31,18 @@ export default function ReceivePaymentClient({
   initialAmount?: string;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [customers, setCustomers] = useState<any[]>([]);
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ["customers"],
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/customers`);
+      if (!res.ok) throw new Error("Failed to load customers");
+      const data = await res.json();
+      return Array.isArray(data) ? data : data.data || data.items || [];
+    }
+  });
 
   const [formData, setFormData] = useState({
     customerId: initialCustomerId,
@@ -42,13 +53,6 @@ export default function ReceivePaymentClient({
     referenceNumber: "",
     notes: ""
   });
-
-  useEffect(() => {
-    fetch(`/api/v1/customers`)
-      .then(res => res.json())
-      .then(data => setCustomers(Array.isArray(data) ? data : data.data || data.items || []))
-      .catch(() => toast.error("Failed to load customers"));
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +79,9 @@ export default function ReceivePaymentClient({
       });
 
       if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ["payments"] });
+        queryClient.invalidateQueries({ queryKey: ["khata"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
         router.push("/payments");
       } else {
         const err = await res.json();
@@ -118,7 +125,7 @@ export default function ReceivePaymentClient({
                   <SelectValue placeholder="Select a customer" />
                 </SelectTrigger>
                 <SelectContent>
-                  {customers.map(c => (
+                  {customers.map((c: any) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>

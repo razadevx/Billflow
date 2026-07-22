@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Icons } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { CustomerForm } from "../components/CustomerForm";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 
 // Future components
 import { CustomerOverview } from "./components/CustomerOverview";
@@ -14,26 +15,18 @@ import { CustomerOrders } from "./components/CustomerOrders";
 import { CustomerStatements } from "./components/CustomerStatements";
 
 export default function CustomerProfilePage({ params }: { params: { id: string } }) {
-  const [customer, setCustomer] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: customer, isLoading: loading } = useQuery({
+    queryKey: ["customers", params.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/customers/${params.id}`);
+      if (!res.ok) throw new Error("Failed to fetch customer");
+      return res.json().then(json => json.data);
+    }
+  });
+
   const [activeTab, setActiveTab] = useState("overview");
   const [editOpen, setEditOpen] = useState(false);
   const router = useRouter();
-
-  const loadCustomer = () => {
-    setLoading(true);
-    fetch(`/api/customers/${params.id}`)
-      .then(res => res.json())
-      .then(json => {
-        setCustomer(json.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    loadCustomer();
-  }, [params.id]);
 
   const tabs = [
     { id: "overview", label: "Overview" },
@@ -132,7 +125,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
             </div>
           )}
         </div>
-        <CustomerForm open={editOpen} onOpenChange={setEditOpen} onSuccess={loadCustomer} customer={customer} redirectOnCreate={false} />
+        <CustomerForm open={editOpen} onOpenChange={setEditOpen} customer={customer} redirectOnCreate={false} />
       </div>
     
   );

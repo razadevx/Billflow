@@ -1,18 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export function CustomerActivity({ customerId }: { customerId: string }) {
-  const [events, setEvents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(true);
-    fetch(`/api/customers/${customerId}/timeline`)
-      .then((res) => res.json())
-      .then((json) => setEvents(json.data || []))
-      .finally(() => setLoading(false));
-  }, [customerId]);
+  const { data: events = [], isLoading: loading } = useQuery({
+    queryKey: ["customers", customerId, "timeline"],
+    queryFn: async () => {
+      const res = await fetch(`/api/customers/${customerId}/timeline`);
+      if (!res.ok) throw new Error("Failed to fetch timeline");
+      return res.json().then(json => json.data || []);
+    }
+  });
 
   return (
     <div className="bg-card p-6 rounded-xl border shadow-sm">
@@ -22,7 +21,7 @@ export function CustomerActivity({ customerId }: { customerId: string }) {
           <p className="text-sm text-muted-foreground">Loading timeline...</p>
         ) : events.length === 0 ? (
           <p className="text-sm text-muted-foreground">No activity recorded yet.</p>
-        ) : events.map((event) => (
+        ) : events.map((event: any) => (
           <div key={`${event.type}-${event.id}`} className="flex gap-4 relative">
             <div className="w-px h-full bg-border absolute left-2.5 top-6"></div>
             <div className="h-5 w-5 rounded-full bg-primary/20 border-2 border-primary z-10 shrink-0 mt-1"></div>

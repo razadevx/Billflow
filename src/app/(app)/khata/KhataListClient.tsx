@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ArrowUpRight, ArrowDownRight, Eye, User } from "lucide-react";
@@ -9,20 +10,18 @@ import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/utils";
 
 export default function KhataListClient() {
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: customers = [], isLoading: loading } = useQuery({
+    queryKey: ["khata"],
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/khata`);
+      if (!res.ok) throw new Error("Failed to load khata");
+      return res.json();
+    }
+  });
+
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    fetch(`/api/v1/khata`)
-      .then(res => res.json())
-      .then(data => {
-        setCustomers(data);
-        setLoading(false);
-      });
-  }, []);
-
-  const filtered = customers.filter(c => 
+  const filtered = customers.filter((c: any) => 
     c.name.toLowerCase().includes(search.toLowerCase()) || 
     (c.customerCode && c.customerCode.toLowerCase().includes(search.toLowerCase()))
   );
@@ -48,7 +47,7 @@ export default function KhataListClient() {
         ) : filtered.length === 0 ? (
           <p className="p-4">No customers found.</p>
         ) : (
-          filtered.map(customer => (
+          filtered.map((customer: any) => (
             <Card key={customer.id} className="flex flex-col justify-between">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">

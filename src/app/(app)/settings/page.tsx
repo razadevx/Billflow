@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,15 +32,47 @@ type Sequence = { id: string; type: string; lastValue: number; };
 type Invitation = { id: string; email: string; role: string; token: string; expiresAt: string; acceptedAt: string | null; };
 
 export default function SettingsPage() {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("company");
-  const [users, setUsers] = useState<User[]>([]);
-  const [settings, setSettings] = useState<Setting[]>([]);
-  const [company, setCompany] = useState<Company | null>(null);
-  const [sequences, setSequences] = useState<Sequence[]>([]);
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { data: adminData, isLoading: loading } = useQuery({
+    queryKey: ["settings"],
+    queryFn: async () => {
+      const [usersRes, settingsRes, companyRes, sequencesRes, invitesRes] = await Promise.all([
+        fetch("/api/v1/administration/users"),
+        fetch("/api/v1/administration/settings"),
+        fetch("/api/v1/administration/company"),
+        fetch("/api/v1/administration/sequences"),
+        fetch("/api/v1/administration/invitations"),
+      ]);
+
+      if (!companyRes.ok) throw new Error("Failed to load administration data");
+
+      const [usersData, settingsData, companyData, seqData, invData] = await Promise.all([
+        usersRes.ok ? usersRes.json().catch(() => []) : [],
+        settingsRes.ok ? settingsRes.json().catch(() => []) : [],
+        companyRes.ok ? companyRes.json().catch(() => null) : null,
+        sequencesRes.ok ? sequencesRes.json().catch(() => []) : [],
+        invitesRes.ok ? invitesRes.json().catch(() => []) : []
+      ]);
+
+      return {
+        users: Array.isArray(usersData) ? usersData : [],
+        settings: Array.isArray(settingsData) ? settingsData : [],
+        company: companyData,
+        sequences: Array.isArray(seqData) ? seqData : [],
+        invitations: Array.isArray(invData) ? invData : []
+      };
+    }
+  });
+
+  const users = adminData?.users || [];
+  const settings = adminData?.settings || [];
+  const company = adminData?.company || null;
+  const sequences = adminData?.sequences || [];
+  const invitations = adminData?.invitations || [];
 
   // Form states
   const [companyForm, setCompanyForm] = useState<Partial<Company>>({});
@@ -90,6 +123,7 @@ export default function SettingsPage() {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: "COMPANY_LOGO", value: data.url })
       });
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
     } catch (err: any) {
       toast.error("Failed to upload logo");
     } finally {
@@ -104,42 +138,18 @@ export default function SettingsPage() {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: "COMPANY_LOGO", value: "" })
       });
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
       toast.success("Logo removed");
     } catch (err) {
       toast.error("Failed to remove logo");
     }
   };
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [usersRes, settingsRes, companyRes, sequencesRes, invitesRes] = await Promise.all([
-        fetch("/api/v1/administration/users"),
-        fetch("/api/v1/administration/settings"),
-        fetch("/api/v1/administration/company"),
-        fetch("/api/v1/administration/sequences"),
-        fetch("/api/v1/administration/invitations"),
-      ]);
+  useEffect(() => {
+    if (adminData) {
+      setCompanyForm(adminData.company || {});
 
-      if (!companyRes.ok) throw new Error("Failed to load administration data");
-
-      const [usersData, settingsData, companyData, seqData, invData] = await Promise.all([
-        usersRes.ok ? usersRes.json().catch(() => []) : [],
-        settingsRes.ok ? settingsRes.json().catch(() => []) : [],
-        companyRes.ok ? companyRes.json().catch(() => null) : null,
-        sequencesRes.ok ? sequencesRes.json().catch(() => []) : [],
-        invitesRes.ok ? invitesRes.json().catch(() => []) : []
-      ]);
-
-      setUsers(Array.isArray(usersData) ? usersData : []);
-      setSettings(Array.isArray(settingsData) ? settingsData : []);
-      setCompany(companyData);
-      setCompanyForm(companyData || {});
-      setSequences(Array.isArray(seqData) ? seqData : []);
-      setInvitations(Array.isArray(invData) ? invData : []);
-
-      // Parse settings
-      const getS = (k: string, d: string) => settingsData.find((s: Setting) => s.key === k)?.value ?? d;
+      const getS = (k: string, d: string) => adminData.settings.find((s: Setting) => s.key === k)?.value ?? d;
       
       setSGeneral({
         COMPANY_LOGO: getS("COMPANY_LOGO", ""),
@@ -163,18 +173,12 @@ export default function SettingsPage() {
         PRINT_PAPER_SIZE: getS("PRINT_PAPER_SIZE", "A4"),
         PRINT_FOOTER: getS("PRINT_FOOTER", "Thank you for your business!"),
       });
-
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [adminData]);
 
   useEffect(() => {
     const tab = new URLSearchParams(window.location.search).get("tab");
     if (tab) setActiveTab(tab === "profile" ? "users" : tab);
-    fetchData();
   }, []);
 
   const saveCompany = async () => {
@@ -185,6 +189,7 @@ export default function SettingsPage() {
         body: JSON.stringify(companyForm)
       });
       if (!res.ok) throw new Error(await res.text());
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
       toast.success("Company profile updated");
     } catch (err: any) {
       toast.error("Failed to update company");
@@ -203,6 +208,7 @@ export default function SettingsPage() {
         })
       );
       await Promise.all(promises);
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
       toast.success("Settings saved successfully");
     } catch (err: any) {
       toast.error("Failed to save settings");
@@ -218,7 +224,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ userId, role: newRole })
       });
       if (!res.ok) throw new Error(await res.text());
-      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
       toast.success("User role updated");
     } catch (err: any) {
       toast.error("Failed to update user role");
@@ -234,7 +240,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ userId: editingUser.id, name: editUserName, email: editUserEmail })
       });
       if (!res.ok) throw new Error(await res.text());
-      setUsers(users.map(u => u.id === editingUser.id ? { ...u, name: editUserName, email: editUserEmail } : u));
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
       toast.success("User details updated");
       setEditingUser(null);
     } catch (err: any) {
@@ -256,7 +262,7 @@ export default function SettingsPage() {
       }
       toast.success("Invitation created");
       setInviteEmail("");
-      fetchData(); // Reload invites
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -265,9 +271,9 @@ export default function SettingsPage() {
   const revokeInvitation = async (id: string) => {
     try {
       const res = await fetch(`/api/v1/administration/invitations/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to revoke");
+      if (!res.ok) throw new Error(await res.text());
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
       toast.success("Invitation revoked");
-      fetchData(); // Reload invites
     } catch (err) {
       toast.error("Failed to revoke invitation");
     }
@@ -284,7 +290,7 @@ export default function SettingsPage() {
         throw new Error(err.error || "Failed to update sequence");
       }
       toast.success("Sequence updated");
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
     } catch (err: any) {
       toast.error(err.message);
     }

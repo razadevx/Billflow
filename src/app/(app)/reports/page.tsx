@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { fetchReportData } from "./actions";
 import { Download, FileText, Loader2, AlertCircle } from "lucide-react";
@@ -22,33 +23,19 @@ const TABS = [
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState("executive");
-  const [loading, setLoading] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>(null);
   const [filter, setFilter] = useState({ page: 1, limit: 10, startDate: "", endDate: "" });
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetchReportData(activeTab, {
+  const [exporting, setExporting] = useState(false);
+  const { data, isLoading: loading, error } = useQuery({
+    queryKey: ["reports", activeTab, filter],
+    queryFn: async () => {
+      return await fetchReportData(activeTab, {
         page: filter.page,
         limit: filter.limit,
         startDate: filter.startDate ? new Date(filter.startDate) : undefined,
         endDate: filter.endDate ? new Date(filter.endDate) : undefined,
       });
-      setData(res);
-    } catch (err: any) {
-      setError(err.message || "Failed to load report data");
-    } finally {
-      setLoading(false);
     }
-  }, [activeTab, filter]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  });
 
   // When changing tabs, reset page to 1
   const handleTabChange = (tabId: string) => {
@@ -186,9 +173,9 @@ export default function ReportsPage() {
           <p>Loading report data...</p>
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center justify-center h-[300px] text-destructive bg-destructive/10 rounded-xl border border-destructive/20">
+        <div className="flex flex-col items-center justify-center h-[300px] text-destructive">
           <AlertCircle className="mb-4" size={32} />
-          <p>{error}</p>
+          <p>{error?.message || "An error occurred"}</p>
         </div>
       ) : activeTab === "executive" ? (
         renderExecutiveDashboard()

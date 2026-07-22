@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { DashboardContainer } from "@/components/layout/DashboardContainer";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -9,21 +9,21 @@ import { useParams, useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { InvoiceStatus } from "@prisma/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function InvoiceDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-  const [invoice, setInvoice] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch(`/api/v1/invoices/${id}`)
-      .then(res => res.json())
-      .then(json => {
-        setInvoice(json.data);
-        setLoading(false);
-      });
-  }, [id]);
+  const queryClient = useQueryClient();
+  
+  const { data: invoice, isLoading: loading } = useQuery({
+    queryKey: ["invoices", id],
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/invoices/${id}`);
+      if (!res.ok) throw new Error("Failed to fetch invoice");
+      return res.json().then(json => json.data);
+    }
+  });
 
   const handleUpdateStatus = async (status: InvoiceStatus) => {
     try {
@@ -33,7 +33,8 @@ export default function InvoiceDetailPage() {
         body: JSON.stringify({ status })
       });
       if (!res.ok) throw new Error("Failed to update status");
-      setInvoice({ ...invoice, status });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["khata"] });
       toast.success("Invoice status updated to " + status);
     } catch (err) {
       toast.error("Could not update status");

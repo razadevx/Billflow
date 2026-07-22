@@ -52,6 +52,7 @@ export default function InventoryDetailClient({ id }: { id: string }) {
     onSuccess: () => {
       toast.success("Item updated");
       queryClient.invalidateQueries({ queryKey: ["inventory", id] });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
     },
     onError: (error) => toast.error(error.message),
   });

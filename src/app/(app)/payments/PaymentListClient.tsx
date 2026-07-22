@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Plus, ArrowLeftRight, XCircle } from "lucide-react";
@@ -9,22 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 
 export default function PaymentListClient() {
-  const [payments, setPayments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchPayments();
-  }, []);
-
-  const fetchPayments = () => {
-    fetch(`/api/v1/payments`)
-      .then(res => res.json())
-      .then(data => {
-        setPayments(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  };
+  const queryClient = useQueryClient();
+  const { data: payments = [], isLoading: loading } = useQuery({
+    queryKey: ["payments"],
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/payments`);
+      if (!res.ok) throw new Error("Failed to fetch payments");
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    }
+  });
 
   const handleVoid = async (id: string) => {
     if (!confirm("Are you sure you want to void this payment? This will reverse the transaction in the ledger.")) return;
@@ -36,7 +30,9 @@ export default function PaymentListClient() {
         body: JSON.stringify({ notes: "Voided by user" })
       });
       if (res.ok) {
-        fetchPayments();
+        queryClient.invalidateQueries({ queryKey: ["payments"] });
+        queryClient.invalidateQueries({ queryKey: ["ledger"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       } else {
         const error = await res.json();
         alert(error.error || "Failed to void payment");
