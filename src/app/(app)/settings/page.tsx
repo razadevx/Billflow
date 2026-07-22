@@ -6,97 +6,200 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { Copy, Trash, Link as LinkIcon, Building2, Settings2, Users as UsersIcon, Mail, Hash, Printer, Info } from "lucide-react";
+import { format } from "date-fns";
 
 type User = { id: string; name: string; email: string; role: string; createdAt: string };
 type Setting = { id: string; key: string; value: string };
+type Company = { id: string; name: string; email: string | null; phone: string | null; address: string | null; taxId: string | null; };
+type Sequence = { id: string; type: string; lastValue: number; };
+type Invitation = { id: string; email: string; role: string; token: string; expiresAt: string; acceptedAt: string | null; };
 
 export default function SettingsPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [settings, setSettings] = useState<Setting[]>([]);
+  const [company, setCompany] = useState<Company | null>(null);
+  const [sequences, setSequences] = useState<Sequence[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Form states
+  const [companyForm, setCompanyForm] = useState<Partial<Company>>({});
   
-  // Settings Form State
-  const [taxRate, setTaxRate] = useState("");
-  const [currency, setCurrency] = useState("USD");
-  const [featureFlags, setFeatureFlags] = useState("");
+  // Settings forms
+  const [sGeneral, setSGeneral] = useState({ COMPANY_LOGO: "", TIMEZONE: "UTC", DATE_FORMAT: "PPP", CURRENCY: "USD", CURRENCY_SYMBOL: "$" });
+  const [sFinancial, setSFinancial] = useState({ DEFAULT_TAX_RATE: "0", INVOICE_DUE_DAYS: "30", DECIMAL_PRECISION: "2", NUMBER_FORMAT: "en-US" });
+  const [sPrinting, setSPrinting] = useState({ PRINT_LOGO: "true", PRINT_TAX: "true", PRINT_BALANCE: "true", PRINT_PAPER_SIZE: "A4", PRINT_FOOTER: "Thank you for your business!" });
+
+  // Invitations
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("STAFF");
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [usersRes, settingsRes, companyRes, sequencesRes, invitesRes] = await Promise.all([
+        fetch("/api/v1/administration/users"),
+        fetch("/api/v1/administration/settings"),
+        fetch("/api/v1/administration/company"),
+        fetch("/api/v1/administration/sequences"),
+        fetch("/api/v1/administration/invitations"),
+      ]);
+
+      if (!companyRes.ok) throw new Error("Failed to load administration data");
+
+      const [usersData, settingsData, companyData, seqData, invData] = await Promise.all([
+        usersRes.json(), settingsRes.json(), companyRes.json(), sequencesRes.json(), invitesRes.json()
+      ]);
+
+      setUsers(usersData);
+      setSettings(settingsData);
+      setCompany(companyData);
+      setCompanyForm(companyData);
+      setSequences(seqData);
+      setInvitations(invData);
+
+      // Parse settings
+      const getS = (k: string, d: string) => settingsData.find((s: Setting) => s.key === k)?.value ?? d;
+      
+      setSGeneral({
+        COMPANY_LOGO: getS("COMPANY_LOGO", ""),
+        TIMEZONE: getS("TIMEZONE", "UTC"),
+        DATE_FORMAT: getS("DATE_FORMAT", "PPP"),
+        CURRENCY: getS("CURRENCY", "USD"),
+        CURRENCY_SYMBOL: getS("CURRENCY_SYMBOL", "$"),
+      });
+
+      setSFinancial({
+        DEFAULT_TAX_RATE: getS("DEFAULT_TAX_RATE", "0"),
+        INVOICE_DUE_DAYS: getS("INVOICE_DUE_DAYS", "30"),
+        DECIMAL_PRECISION: getS("DECIMAL_PRECISION", "2"),
+        NUMBER_FORMAT: getS("NUMBER_FORMAT", "en-US"),
+      });
+
+      setSPrinting({
+        PRINT_LOGO: getS("PRINT_LOGO", "true"),
+        PRINT_TAX: getS("PRINT_TAX", "true"),
+        PRINT_BALANCE: getS("PRINT_BALANCE", "true"),
+        PRINT_PAPER_SIZE: getS("PRINT_PAPER_SIZE", "A4"),
+        PRINT_FOOTER: getS("PRINT_FOOTER", "Thank you for your business!"),
+      });
+
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const [usersRes, settingsRes] = await Promise.all([
-          fetch("/api/v1/administration/users"),
-          fetch("/api/v1/administration/settings")
-        ]);
-
-        if (!usersRes.ok || !settingsRes.ok) throw new Error("Failed to load data");
-
-        const usersData = await usersRes.json();
-        const settingsData = await settingsRes.json();
-
-        setUsers(usersData);
-        setSettings(settingsData);
-
-        const tr = settingsData.find((s: Setting) => s.key === "TAX_RATE")?.value || "";
-        const cr = settingsData.find((s: Setting) => s.key === "CURRENCY")?.value || "USD";
-        const ff = settingsData.find((s: Setting) => s.key === "FEATURE_FLAGS")?.value || "";
-        
-        setTaxRate(tr);
-        setCurrency(cr);
-        setFeatureFlags(ff);
-
-      } catch (err: any) {
-        setError(err.message || "An error occurred");
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchData();
   }, []);
 
-  const saveSettings = async () => {
+  const saveCompany = async () => {
+    setSaving(true);
     try {
-      await Promise.all([
+      const res = await fetch("/api/v1/administration/company", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(companyForm)
+      });
+      if (!res.ok) throw new Error(await res.text());
+      toast.success("Company profile updated");
+    } catch (err: any) {
+      toast.error("Failed to update company");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveSettingsGroup = async (group: Record<string, string>) => {
+    setSaving(true);
+    try {
+      const promises = Object.entries(group).map(([key, value]) =>
         fetch("/api/v1/administration/settings", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: "TAX_RATE", value: taxRate })
-        }),
-        fetch("/api/v1/administration/settings", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: "CURRENCY", value: currency })
-        }),
-        fetch("/api/v1/administration/settings", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: "FEATURE_FLAGS", value: featureFlags })
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key, value: String(value) })
         })
-      ]);
-      alert("Settings saved successfully");
-    } catch (err) {
-      alert("Failed to save settings");
+      );
+      await Promise.all(promises);
+      toast.success("Settings saved successfully");
+    } catch (err: any) {
+      toast.error("Failed to save settings");
+    } finally {
+      setSaving(false);
     }
   };
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
       const res = await fetch("/api/v1/administration/users", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, role: newRole })
       });
       if (!res.ok) throw new Error("Failed to update user");
-      
+      toast.success("Role updated");
       setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
     } catch (err) {
-      alert("Failed to update role");
+      toast.error("Failed to update role");
     }
   };
+
+  const createInvitation = async () => {
+    try {
+      const res = await fetch("/api/v1/administration/invitations", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to create invitation");
+      }
+      toast.success("Invitation created");
+      setInviteEmail("");
+      fetchData(); // Reload invites
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const revokeInvitation = async (id: string) => {
+    try {
+      const res = await fetch(`/api/v1/administration/invitations/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to revoke");
+      toast.success("Invitation revoked");
+      fetchData(); // Reload invites
+    } catch (err) {
+      toast.error("Failed to revoke invitation");
+    }
+  };
+
+  const updateSequence = async (id: string, lastValue: number) => {
+    try {
+      const res = await fetch("/api/v1/administration/sequences", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, lastValue })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to update sequence");
+      }
+      toast.success("Sequence updated");
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -115,7 +218,7 @@ export default function SettingsPage() {
       <div className="space-y-6">
         <PageHeader title="Administration" description="Manage company settings and users." />
         <div className="bg-destructive/10 text-destructive border-destructive rounded-xl p-6 flex flex-col items-center justify-center min-h-[400px]">
-          <h3 className="text-xl font-bold mb-2">Error Loading Settings</h3>
+          <h3 className="text-xl font-bold mb-2">Error Loading Administration</h3>
           <p>{error}</p>
           <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>Retry</Button>
         </div>
@@ -125,112 +228,409 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 pb-20">
-      <PageHeader title="Administration" description="Manage company settings, users, and roles." />
+      <PageHeader title="Administration" description="Manage company profile, business rules, users, and core settings." />
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Settings Card */}
-        <Card className="shadow-sm border border-border">
-          <CardHeader>
-            <CardTitle>Company Settings</CardTitle>
-            <CardDescription>Configure global application settings</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="taxRate">Global Tax Rate (%)</Label>
-              <Input 
-                id="taxRate" 
-                value={taxRate} 
-                onChange={(e) => setTaxRate(e.target.value)} 
-                placeholder="e.g. 18" 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="currency">Currency Code</Label>
-              <Input 
-                id="currency" 
-                value={currency} 
-                onChange={(e) => setCurrency(e.target.value)} 
-                placeholder="e.g. USD, INR" 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="featureFlags">Feature Flags (JSON)</Label>
-              <Input 
-                id="featureFlags" 
-                value={featureFlags} 
-                onChange={(e) => setFeatureFlags(e.target.value)} 
-                placeholder='{"newDashboard": true}' 
-              />
-            </div>
-            <Button onClick={saveSettings} className="w-full">Save Settings</Button>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="company" className="w-full">
+        <TabsList className="grid w-full grid-cols-7 mb-8 h-12">
+          <TabsTrigger value="company"><Building2 className="w-4 h-4 mr-2 hidden sm:block" /> Company</TabsTrigger>
+          <TabsTrigger value="business"><Settings2 className="w-4 h-4 mr-2 hidden sm:block" /> Business</TabsTrigger>
+          <TabsTrigger value="users"><UsersIcon className="w-4 h-4 mr-2 hidden sm:block" /> Users</TabsTrigger>
+          <TabsTrigger value="invitations"><Mail className="w-4 h-4 mr-2 hidden sm:block" /> Invitations</TabsTrigger>
+          <TabsTrigger value="numbering"><Hash className="w-4 h-4 mr-2 hidden sm:block" /> Numbering</TabsTrigger>
+          <TabsTrigger value="printing"><Printer className="w-4 h-4 mr-2 hidden sm:block" /> Printing</TabsTrigger>
+          <TabsTrigger value="about"><Info className="w-4 h-4 mr-2 hidden sm:block" /> About</TabsTrigger>
+        </TabsList>
 
-        {/* Profile Card */}
-        <Card className="shadow-sm border border-border">
-          <CardHeader>
-            <CardTitle>Profile Management</CardTitle>
-            <CardDescription>Manage your personal profile</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-             <div className="p-4 bg-muted/50 rounded-lg border text-sm text-muted-foreground flex items-center justify-center h-32">
-                Profile details loaded from current session.
-             </div>
-             <Button variant="outline" className="w-full">Edit Profile</Button>
-          </CardContent>
-        </Card>
-      </div>
+        {/* ============================================================== */}
+        {/* COMPANY PROFILE TAB */}
+        {/* ============================================================== */}
+        <TabsContent value="company">
+          <Card className="max-w-2xl shadow-sm border border-border">
+            <CardHeader>
+              <CardTitle>Company Profile</CardTitle>
+              <CardDescription>Primary company details displayed on invoices and reports.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2 col-span-2">
+                  <Label>Company Name</Label>
+                  <Input value={companyForm.name ?? ""} onChange={e => setCompanyForm({...companyForm, name: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tax ID / GST / VAT</Label>
+                  <Input value={companyForm.taxId ?? ""} onChange={e => setCompanyForm({...companyForm, taxId: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input type="email" value={companyForm.email ?? ""} onChange={e => setCompanyForm({...companyForm, email: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Phone</Label>
+                  <Input value={companyForm.phone ?? ""} onChange={e => setCompanyForm({...companyForm, phone: e.target.value})} />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Full Address</Label>
+                  <Textarea value={companyForm.address ?? ""} onChange={e => setCompanyForm({...companyForm, address: e.target.value})} rows={3} />
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="border-t bg-slate-50 py-4">
+              <Button onClick={saveCompany} disabled={saving}>Save Company Profile</Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
 
-      {/* Users Card */}
-      <Card className="shadow-sm border border-border mt-6">
-        <CardHeader>
-          <CardTitle>User Management</CardTitle>
-          <CardDescription>Manage application users and roles</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {users.length === 0 ? (
-            <div className="text-center py-10 border border-dashed rounded-lg">
-              <p className="text-muted-foreground">No users found.</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map(user => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'}>
-                        {user.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <select 
-                        className="text-sm border rounded p-1 mr-2 bg-background"
-                        value={user.role}
-                        onChange={(e) => updateUserRole(user.id, e.target.value)}
-                      >
-                        <option value="STAFF">STAFF</option>
-                        <option value="MANAGER">MANAGER</option>
-                        <option value="ADMIN">ADMIN</option>
-                        <option value="OWNER">OWNER</option>
-                      </select>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+        {/* ============================================================== */}
+        {/* BUSINESS SETTINGS TAB */}
+        {/* ============================================================== */}
+        <TabsContent value="business" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="shadow-sm border border-border">
+              <CardHeader>
+                <CardTitle>General Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Company Logo URL</Label>
+                  <Input value={sGeneral.COMPANY_LOGO} onChange={e => setSGeneral({...sGeneral, COMPANY_LOGO: e.target.value})} placeholder="https://..." />
+                </div>
+                <div className="space-y-2">
+                  <Label>Time Zone</Label>
+                  <Input value={sGeneral.TIMEZONE} onChange={e => setSGeneral({...sGeneral, TIMEZONE: e.target.value})} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Currency Code</Label>
+                    <Input value={sGeneral.CURRENCY} onChange={e => setSGeneral({...sGeneral, CURRENCY: e.target.value})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Currency Symbol</Label>
+                    <Input value={sGeneral.CURRENCY_SYMBOL} onChange={e => setSGeneral({...sGeneral, CURRENCY_SYMBOL: e.target.value})} />
+                  </div>
+                </div>
+                <Button onClick={() => saveSettingsGroup(sGeneral)} disabled={saving} className="w-full">Save General Settings</Button>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border border-border">
+              <CardHeader>
+                <CardTitle>Financial Rules</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Default Tax Rate (%)</Label>
+                  <Input type="number" min="0" value={sFinancial.DEFAULT_TAX_RATE} onChange={e => setSFinancial({...sFinancial, DEFAULT_TAX_RATE: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Invoice Due Days</Label>
+                  <Input type="number" min="0" value={sFinancial.INVOICE_DUE_DAYS} onChange={e => setSFinancial({...sFinancial, INVOICE_DUE_DAYS: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Decimal Precision</Label>
+                  <Select value={sFinancial.DECIMAL_PRECISION} onValueChange={v => setSFinancial({...sFinancial, DECIMAL_PRECISION: v ?? "2"})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0 (e.g. $100)</SelectItem>
+                      <SelectItem value="2">2 (e.g. $100.50)</SelectItem>
+                      <SelectItem value="3">3 (e.g. $100.500)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={() => saveSettingsGroup(sFinancial)} disabled={saving} className="w-full">Save Financial Rules</Button>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* ============================================================== */}
+        {/* USERS TAB */}
+        {/* ============================================================== */}
+        <TabsContent value="users">
+          <div className="space-y-6">
+            <Card className="shadow-sm border border-border">
+              <CardHeader>
+                <CardTitle>Role Permissions Matrix</CardTitle>
+                <CardDescription>Hardcoded permissions across the platform.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table className="text-sm">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Permissions Overview</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="font-bold text-primary">OWNER</TableCell>
+                      <TableCell>Full access. Can manage billing, delete the company, and change all settings.</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-bold text-indigo-600">ADMIN</TableCell>
+                      <TableCell>Can manage users, adjust sequences, modify settings, void payments, and override pricing.</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-bold text-slate-600">MANAGER</TableCell>
+                      <TableCell>Can create/edit Work Orders, accept Payments, and manage Inventory. Cannot alter global settings.</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-bold text-muted-foreground">STAFF</TableCell>
+                      <TableCell>Can view Work Orders, mark steps as complete, and add notes. Cannot see financial totals or delete records.</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border border-border">
+              <CardHeader>
+                <CardTitle>Active Users</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead>Role</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map(user => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium">{user.name}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell className="text-muted-foreground">{format(new Date(user.createdAt), "MMM d, yyyy")}</TableCell>
+                        <TableCell>
+                          <Select value={user.role} onValueChange={(v) => updateUserRole(user.id, v ?? "STAFF")}>
+                            <SelectTrigger className="w-[120px] h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="STAFF">STAFF</SelectItem>
+                              <SelectItem value="MANAGER">MANAGER</SelectItem>
+                              <SelectItem value="ADMIN">ADMIN</SelectItem>
+                              <SelectItem value="OWNER">OWNER</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* ============================================================== */}
+        {/* INVITATIONS TAB */}
+        {/* ============================================================== */}
+        <TabsContent value="invitations">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="shadow-sm border border-border lg:col-span-1">
+              <CardHeader>
+                <CardTitle>Generate Invite Link</CardTitle>
+                <CardDescription>Create a sign-up link for a new employee.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Email Address</Label>
+                  <Input type="email" placeholder="staff@example.com" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <Select value={inviteRole} onValueChange={v => setInviteRole(v ?? "STAFF")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="STAFF">STAFF</SelectItem>
+                      <SelectItem value="MANAGER">MANAGER</SelectItem>
+                      <SelectItem value="ADMIN">ADMIN</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={createInvitation} className="w-full">Create Invite Link</Button>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm border border-border lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Pending Invitations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {invitations.length === 0 ? (
+                  <p className="text-muted-foreground text-sm py-4">No active invitations.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Expires</TableHead>
+                        <TableHead>Link</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {invitations.map(inv => {
+                        const link = `${window.location.origin}/auth/invite/${inv.token}`;
+                        const isExpired = new Date(inv.expiresAt) < new Date();
+                        return (
+                          <TableRow key={inv.id}>
+                            <TableCell className="font-medium">{inv.email}</TableCell>
+                            <TableCell><Badge variant="secondary">{inv.role}</Badge></TableCell>
+                            <TableCell className={isExpired ? "text-red-500" : ""}>
+                              {format(new Date(inv.expiresAt), "MMM d, yyyy")}
+                            </TableCell>
+                            <TableCell>
+                              <Button variant="ghost" size="sm" onClick={() => {
+                                navigator.clipboard.writeText(link);
+                                toast.success("Invite link copied to clipboard!");
+                              }}>
+                                <LinkIcon className="w-4 h-4 mr-2" /> Copy Link
+                              </Button>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="sm" className="text-red-500" onClick={() => revokeInvitation(inv.id)}>
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* ============================================================== */}
+        {/* NUMBERING TAB */}
+        {/* ============================================================== */}
+        <TabsContent value="numbering">
+          <Card className="max-w-3xl shadow-sm border border-border">
+            <CardHeader>
+              <CardTitle>Sequence Management</CardTitle>
+              <CardDescription>Adjust the starting numbers for various documents. Sequences can only be moved forward.</CardDescription>
+            </CardHeader>
+            <CardContent>
+               <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Document Type</TableHead>
+                      <TableHead>Last Used Number</TableHead>
+                      <TableHead>Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sequences.map(seq => (
+                      <TableRow key={seq.id}>
+                        <TableCell className="font-medium">{seq.type}</TableCell>
+                        <TableCell>
+                          <Input 
+                            type="number" 
+                            defaultValue={seq.lastValue} 
+                            min={seq.lastValue}
+                            className="w-32"
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value);
+                              if (val > seq.lastValue) updateSequence(seq.id, val);
+                              else e.target.value = seq.lastValue.toString();
+                            }} 
+                          />
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-xs">
+                          Edit box and blur to save. Next generated document will be #{seq.lastValue + 1}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {sequences.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">No sequences found yet.</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ============================================================== */}
+        {/* PRINTING TAB */}
+        {/* ============================================================== */}
+        <TabsContent value="printing">
+          <Card className="max-w-2xl shadow-sm border border-border">
+            <CardHeader>
+              <CardTitle>Printing Layout Settings</CardTitle>
+              <CardDescription>Configure how physical documents look.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Show Company Logo</Label>
+                  <p className="text-xs text-muted-foreground">If uploaded in General Settings</p>
+                </div>
+                <Switch checked={sPrinting.PRINT_LOGO === "true"} onCheckedChange={(c) => setSPrinting({...sPrinting, PRINT_LOGO: String(c)})} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Show Tax Details</Label>
+                  <p className="text-xs text-muted-foreground">Display tax breakdowns on invoices</p>
+                </div>
+                <Switch checked={sPrinting.PRINT_TAX === "true"} onCheckedChange={(c) => setSPrinting({...sPrinting, PRINT_TAX: String(c)})} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Show Customer Balance</Label>
+                  <p className="text-xs text-muted-foreground">Display current running balance at the bottom</p>
+                </div>
+                <Switch checked={sPrinting.PRINT_BALANCE === "true"} onCheckedChange={(c) => setSPrinting({...sPrinting, PRINT_BALANCE: String(c)})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Default Paper Size</Label>
+                <Select value={sPrinting.PRINT_PAPER_SIZE} onValueChange={v => setSPrinting({...sPrinting, PRINT_PAPER_SIZE: v ?? "A4"})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A4">A4 (Standard)</SelectItem>
+                    <SelectItem value="LETTER">US Letter</SelectItem>
+                    <SelectItem value="THERMAL_80">Thermal Receipt (80mm)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Print Footer Text</Label>
+                <Textarea value={sPrinting.PRINT_FOOTER} onChange={e => setSPrinting({...sPrinting, PRINT_FOOTER: e.target.value})} rows={2} />
+              </div>
+              <Button onClick={() => saveSettingsGroup(sPrinting)} disabled={saving} className="w-full">Save Printing Settings</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ============================================================== */}
+        {/* ABOUT TAB */}
+        {/* ============================================================== */}
+        <TabsContent value="about">
+          <Card className="max-w-2xl shadow-sm border border-border">
+            <CardContent className="pt-6 text-center space-y-4">
+              <div className="w-16 h-16 bg-primary rounded-xl mx-auto flex items-center justify-center text-white font-black text-2xl">
+                B
+              </div>
+              <h2 className="text-2xl font-bold">BillFlow ERP</h2>
+              <p className="text-muted-foreground">Version 1.0.0 (Phase 5 Production Build)</p>
+              <div className="bg-slate-50 p-4 rounded-lg text-sm text-slate-600 space-y-2 max-w-md mx-auto text-left border">
+                <p>✔ Inventory & Square Foot Engine</p>
+                <p>✔ Dynamic Work Orders & Timeline</p>
+                <p>✔ Ledger & Payment Allocation</p>
+                <p>✔ Core Administration</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+      </Tabs>
     </div>
   );
 }

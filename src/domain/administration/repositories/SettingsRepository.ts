@@ -1,6 +1,6 @@
 import { Settings, Prisma } from "@prisma/client";
 import { BaseRepository } from "@/server/core/BaseRepository";
-import { db as prisma } from "@/server/db";
+import { db as prisma, DbClient } from "@/server/db";
 
 export class SettingsRepository extends BaseRepository<
   Settings,
@@ -11,8 +11,8 @@ export class SettingsRepository extends BaseRepository<
     return this.prisma.settings;
   }
 
-  constructor() {
-    super(prisma);
+  constructor(protected readonly db: DbClient = prisma) {
+    super(db);
   }
 
   async findByKey(companyId: string, key: string): Promise<Settings | null> {

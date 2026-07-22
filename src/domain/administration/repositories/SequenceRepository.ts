@@ -1,6 +1,6 @@
 import { Sequence, Prisma } from "@prisma/client";
 import { BaseRepository } from "@/server/core/BaseRepository";
-import { db as prisma } from "@/server/db";
+import { db as prisma, DbClient } from "@/server/db";
 
 export class SequenceRepository extends BaseRepository<
   Sequence,
@@ -11,8 +11,8 @@ export class SequenceRepository extends BaseRepository<
     return this.prisma.sequence;
   }
 
-  constructor() {
-    super(prisma);
+  constructor(protected readonly db: DbClient = prisma) {
+    super(db);
   }
 
   async findByType(companyId: string, type: string): Promise<Sequence | null> {

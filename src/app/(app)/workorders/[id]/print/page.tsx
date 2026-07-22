@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { format } from "date-fns";
 import { getRequestContext } from "@/server/core/context";
 import { Printer } from "lucide-react";
+import { AdministrationService } from "@/domain/administration/services/AdministrationService";
 
 export default async function PrintWorkOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getRequestContext();
@@ -21,8 +22,21 @@ export default async function PrintWorkOrderPage({ params }: { params: Promise<{
 
   if (!wo) return notFound();
 
+  const adminService = new AdministrationService(ctx);
+  const settingsResult = await adminService.getCompanySettings();
+  const settings = settingsResult.isSuccess() ? settingsResult.value : [];
+  
+  const getS = (k: string, d: string) => settings.find(s => s.key === k)?.value ?? d;
+  
+  const companyLogo = getS("COMPANY_LOGO", "");
+  const printLogo = getS("PRINT_LOGO", "true") === "true";
+  const printTax = getS("PRINT_TAX", "true") === "true";
+  const printBalance = getS("PRINT_BALANCE", "true") === "true";
+  const printFooter = getS("PRINT_FOOTER", "Thank you for your business!");
+
   return (
     <div className="bg-white min-h-screen text-black">
+      <style dangerouslySetInnerHTML={{ __html: `@page { size: ${getS("PRINT_PAPER_SIZE", "A4").toLowerCase()}; margin: 10mm; }` }} />
       {/* Print Button (Hidden when printing) */}
       <div className="print:hidden p-4 bg-slate-100 flex justify-between items-center border-b">
         <div>
@@ -42,10 +56,16 @@ export default async function PrintWorkOrderPage({ params }: { params: Promise<{
         
         {/* Header */}
         <div className="flex justify-between items-start border-b-2 border-black pb-6 mb-6">
-          <div>
-            <h1 className="text-3xl font-black uppercase tracking-tight">{wo.company?.name || "BILLFLOW"}</h1>
-            <p className="text-sm mt-1">{wo.company?.address || "Company Address"}</p>
-            <p className="text-sm">{wo.company?.phone || "Phone"} • {wo.company?.email || "Email"}</p>
+          <div className="flex items-center space-x-4">
+            {printLogo && companyLogo && (
+              <img src={companyLogo} alt="Company Logo" className="h-16 object-contain" />
+            )}
+            <div>
+              <h1 className="text-3xl font-black uppercase tracking-tight">{wo.company?.name || "BILLFLOW"}</h1>
+              <p className="text-sm mt-1">{wo.company?.address || "Company Address"}</p>
+              <p className="text-sm">{wo.company?.phone || "Phone"} • {wo.company?.email || "Email"}</p>
+              {wo.company?.taxId && <p className="text-sm">Tax ID: {wo.company.taxId}</p>}
+            </div>
           </div>
           <div className="text-right">
             <h2 className="text-4xl font-black text-slate-200">WORK ORDER</h2>
@@ -103,14 +123,22 @@ export default async function PrintWorkOrderPage({ params }: { params: Promise<{
               <span className="font-bold text-slate-500">Subtotal:</span>
               <span>${wo.subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between py-2 border-b">
-              <span className="font-bold text-slate-500">Tax:</span>
-              <span>${wo.tax.toFixed(2)}</span>
-            </div>
+            {printTax && (
+              <div className="flex justify-between py-2 border-b">
+                <span className="font-bold text-slate-500">Tax:</span>
+                <span>${wo.tax.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between py-3 border-b-2 border-black">
               <span className="font-black text-xl">Total:</span>
               <span className="font-black text-xl">${wo.total.toFixed(2)}</span>
             </div>
+            {printBalance && (
+              <div className="flex justify-between py-2 mt-2">
+                <span className="font-bold text-red-500">Balance Due:</span>
+                <span className="font-bold text-red-500">${wo.total.toFixed(2)}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -127,6 +155,12 @@ export default async function PrintWorkOrderPage({ params }: { params: Promise<{
             </div>
           </div>
         </div>
+
+        {printFooter && (
+          <div className="mt-16 pt-8 border-t text-center text-sm text-slate-500">
+            <p>{printFooter}</p>
+          </div>
+        )}
 
         <script
           dangerouslySetInnerHTML={{
