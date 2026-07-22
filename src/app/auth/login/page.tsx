@@ -43,55 +43,62 @@ export default function LoginPage() {
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader className="space-y-1 text-center">
-        <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-        <CardDescription>
+    <Card className="w-full border-[#222] bg-[#121212] text-white shadow-2xl">
+      <CardHeader className="space-y-2 text-center pb-6">
+        <CardTitle className="text-2xl font-bold tracking-tight text-white">Welcome back</CardTitle>
+        <CardDescription className="text-zinc-400 text-sm">
           Enter your email and password to sign in
         </CardDescription>
       </CardHeader>
-      <form onSubmit={handleLogin}>
-        <CardContent className="space-y-4">
+      
+      <CardContent>
+        <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-sm font-medium text-zinc-200">Email</Label>
             <Input 
               id="email" 
               type="email" 
               placeholder="name@example.com" 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="h-10 rounded-lg border-transparent bg-[#1e2330] px-3 text-white placeholder:text-zinc-500 focus:border-blue-500 focus:bg-[#1e2330] focus:ring-1 focus:ring-blue-500"
               required 
             />
           </div>
+
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
-              <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
+              <Label htmlFor="password" className="text-sm font-medium text-zinc-200">Password</Label>
+              <Link href="/auth/forgot-password" className="text-sm font-medium text-blue-500 hover:text-blue-400 transition-colors">
                 Forgot password?
               </Link>
             </div>
             <Input 
               id="password" 
               type="password" 
+              placeholder="••••••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="h-10 rounded-lg border-transparent bg-[#1e2330] px-3 text-white placeholder:text-zinc-500 focus:border-blue-500 focus:bg-[#1e2330] focus:ring-1 focus:ring-blue-500"
               required 
             />
           </div>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <Button type="submit" className="w-full" disabled={loading}>
+
+          <Button type="submit" className="mt-2 w-full bg-blue-500 text-white hover:bg-blue-600 h-10 rounded-lg font-medium transition-colors" disabled={loading}>
             {loading ? <Icons.loader className="w-4 h-4 mr-2 animate-spin" /> : null}
             Sign In
           </Button>
-          <div className="text-sm text-center text-muted-foreground">
-            Don't have an account?{" "}
-            <Link href="/auth/register" className="text-primary hover:underline">
-              Register here
-            </Link>
-          </div>
-        </CardFooter>
-      </form>
+        </form>
+      </CardContent>
+      
+      <CardFooter className="flex justify-center pb-6">
+        <div className="text-center text-sm text-zinc-400">
+          Don't have an account?{" "}
+          <Link href="/auth/register" className="font-medium text-blue-500 hover:text-blue-400 transition-colors">
+            Register here
+          </Link>
+        </div>
+      </CardFooter>
     </Card>
   );
 }

@@ -65,71 +65,79 @@ export default function RegisterPage() {
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader className="space-y-1 text-center">
-        <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-        <CardDescription>
+    <Card className="w-full border-[#222] bg-[#121212] text-white shadow-2xl">
+      <CardHeader className="space-y-2 text-center pb-6">
+        <CardTitle className="text-2xl font-bold tracking-tight text-white">Create an account</CardTitle>
+        <CardDescription className="text-zinc-400 text-sm">
           Enter your company details to get started
         </CardDescription>
       </CardHeader>
-      <form onSubmit={handleRegister}>
-        <CardContent className="space-y-4">
+      
+      <CardContent>
+        <form onSubmit={handleRegister} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="companyName">Company Name</Label>
+            <Label htmlFor="companyName" className="text-sm font-medium text-zinc-200">Company Name</Label>
             <Input 
               id="companyName" 
               placeholder="Acme Corp" 
               value={formData.companyName}
               onChange={handleChange}
+              className="h-10 rounded-lg border-transparent bg-[#1e2330] px-3 text-white placeholder:text-zinc-500 focus:border-blue-500 focus:bg-[#1e2330] focus:ring-1 focus:ring-blue-500"
               required 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="userName">Your Name</Label>
+            <Label htmlFor="userName" className="text-sm font-medium text-zinc-200">Your Name</Label>
             <Input 
               id="userName" 
               placeholder="John Doe" 
               value={formData.userName}
               onChange={handleChange}
+              className="h-10 rounded-lg border-transparent bg-[#1e2330] px-3 text-white placeholder:text-zinc-500 focus:border-blue-500 focus:bg-[#1e2330] focus:ring-1 focus:ring-blue-500"
               required 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-sm font-medium text-zinc-200">Email</Label>
             <Input 
               id="email" 
               type="email" 
               placeholder="name@example.com" 
               value={formData.email}
               onChange={handleChange}
+              className="h-10 rounded-lg border-transparent bg-[#1e2330] px-3 text-white placeholder:text-zinc-500 focus:border-blue-500 focus:bg-[#1e2330] focus:ring-1 focus:ring-blue-500"
               required 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-sm font-medium text-zinc-200">Password</Label>
             <Input 
               id="password" 
-              type="password" 
+              type="password"
+              placeholder="••••••••••••"
               value={formData.password}
               onChange={handleChange}
+              className="h-10 rounded-lg border-transparent bg-[#1e2330] px-3 text-white placeholder:text-zinc-500 focus:border-blue-500 focus:bg-[#1e2330] focus:ring-1 focus:ring-blue-500"
               required 
               minLength={8}
             />
           </div>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <Button type="submit" className="w-full" disabled={loading}>
+
+          <Button type="submit" className="mt-2 w-full bg-blue-500 text-white hover:bg-blue-600 h-10 rounded-lg font-medium transition-colors" disabled={loading}>
             {loading ? <Icons.loader className="w-4 h-4 mr-2 animate-spin" /> : null}
             Create Account
           </Button>
-          <div className="text-sm text-center text-muted-foreground">
-            Already have an account?{" "}
-            <Link href="/auth/login" className="text-primary hover:underline">
-              Sign in
-            </Link>
-          </div>
-        </CardFooter>
-      </form>
+        </form>
+      </CardContent>
+      
+      <CardFooter className="flex justify-center pb-6">
+        <div className="text-center text-sm text-zinc-400">
+          Already have an account?{" "}
+          <Link href="/auth/login" className="font-medium text-blue-500 hover:text-blue-400 transition-colors">
+            Sign in
+          </Link>
+        </div>
+      </CardFooter>
     </Card>
   );
 }
