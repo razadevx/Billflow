@@ -124,12 +124,12 @@ export function AppHeader() {
             )}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>
+            <div className="px-3 py-2 text-sm font-medium text-muted-foreground">
               <div className="flex items-center justify-between">
                 <span>Notifications</span>
                 <span className="text-xs text-muted-foreground">{notificationCount} active</span>
               </div>
-            </DropdownMenuLabel>
+            </div>
             <DropdownMenuSeparator />
             {notifications.length === 0 ? (
               <div className="px-3 py-6 text-center text-sm text-muted-foreground">
@@ -181,14 +181,14 @@ export function AppHeader() {
               )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>
+              <div className="px-3 py-2 text-sm">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{session.user.name || "User Profile"}</p>
+                  <p className="font-medium leading-none">{session.user.name || "User Profile"}</p>
                   <p className="text-xs leading-none text-muted-foreground">
                     {session.user.email || "user@billflow.com"}
                   </p>
                 </div>
-              </DropdownMenuLabel>
+              </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => router.push("/settings")}>
                 <Icons.settings className="mr-2 h-4 w-4" />
