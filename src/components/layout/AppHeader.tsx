@@ -30,6 +30,7 @@ export function AppHeader() {
     user: { name: "User Profile", email: "user@billflow.com" },
   });
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   // Simple Breadcrumb logic based on pathname
   const segments = pathname.split("/").filter(Boolean);
 
@@ -56,7 +57,9 @@ export function AppHeader() {
         if (user) setSession({ user });
       })
       .catch(() => {});
+  }, []);
 
+  useEffect(() => {
     fetch("/api/dashboard")
       .then((res) => res.ok ? res.json() : null)
       .then((json) => {
@@ -71,14 +74,14 @@ export function AppHeader() {
         const outstanding = (data?.outstandingCustomers || []).map((customer: any) => ({
           id: `customer-${customer.id}`,
           title: "Outstanding balance",
-          description: `${customer.name} has unpaid balance`,
+          description: `${customer.name} has unpaid balance of ${Number(customer.balance).toLocaleString()}`,
           href: `/khata/${customer.id}`,
           tone: "danger" as const,
         }));
         setNotifications([...lowStock, ...outstanding]);
       })
       .catch(() => setNotifications([]));
-  }, []);
+  }, [pathname]);
 
   const notificationCount = notifications.length;
   const nextTheme = resolvedTheme === "dark" ? "light" : "dark";
@@ -111,7 +114,7 @@ export function AppHeader() {
           <kbd className="ml-4 font-mono text-[10px] bg-background px-1.5 rounded border border-border">Ctrl K</kbd>
         </button>
         
-        <DropdownMenu>
+        <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
           <DropdownMenuTrigger className="relative rounded-lg p-2 text-muted-foreground outline-none hover:bg-muted hover:text-foreground">
             <Icons.notification className="h-5 w-5" />
             {notificationCount > 0 && (
@@ -135,10 +138,13 @@ export function AppHeader() {
             ) : notifications.map((notification) => (
               <DropdownMenuItem
                 key={notification.id}
-                onClick={() => router.push(notification.href)}
+                onClick={() => {
+                  setNotificationsOpen(false);
+                  router.push(notification.href);
+                }}
                 className="items-start gap-3 py-3"
               >
-                <span className={`mt-1 h-2 w-2 rounded-full ${notification.tone === "danger" ? "bg-destructive" : "bg-warning"}`} />
+                <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${notification.tone === "danger" ? "bg-destructive" : "bg-warning"}`} />
                 <span className="min-w-0">
                   <span className="block font-medium">{notification.title}</span>
                   <span className="block truncate text-xs text-muted-foreground">{notification.description}</span>
