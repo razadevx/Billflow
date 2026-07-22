@@ -60,7 +60,11 @@ export default function SettingsPage() {
       if (!companyRes.ok) throw new Error("Failed to load administration data");
 
       const [usersData, settingsData, companyData, seqData, invData] = await Promise.all([
-        usersRes.json(), settingsRes.json(), companyRes.json(), sequencesRes.json(), invitesRes.json()
+        usersRes.ok ? usersRes.json() : [],
+        settingsRes.ok ? settingsRes.json() : [],
+        companyRes.ok ? companyRes.json() : null,
+        sequencesRes.ok ? sequencesRes.json() : [],
+        invitesRes.ok ? invitesRes.json() : []
       ]);
 
       setUsers(usersData);

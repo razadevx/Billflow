@@ -3,6 +3,9 @@
 @plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant data-horizontal (&[data-orientation="horizontal"]);
+@custom-variant data-vertical (&[data-orientation="vertical"]);
+@custom-variant data-active (&[data-active], &[data-state="active"], &[data-selected]);
 
 @theme {
   /* Layout Grid Tokens */
