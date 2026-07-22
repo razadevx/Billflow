@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Icons } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
+import { CustomerForm } from "../components/CustomerForm";
 
 // Future components
 import { CustomerOverview } from "./components/CustomerOverview";
@@ -15,16 +16,21 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
   const [customer, setCustomer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [editOpen, setEditOpen] = useState(false);
 
-  useEffect(() => {
-    // In React 19 / Next 15 with async params, we might need to await params.id if it was a promise,
-    // but here we just use it directly for simplicity as per current types.
+  const loadCustomer = () => {
+    setLoading(true);
     fetch(`/api/customers/${params.id}`)
       .then(res => res.json())
       .then(json => {
         setCustomer(json.data);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadCustomer();
   }, [params.id]);
 
   const tabs = [
@@ -87,6 +93,7 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
           </div>
           <div className="flex space-x-3">
             <Button variant="outline"><Icons.phone className="mr-2 h-4 w-4" /> Call</Button>
+            <Button variant="outline" onClick={() => setEditOpen(true)}><Icons.edit className="mr-2 h-4 w-4" /> Edit</Button>
             <Button><Icons.add className="mr-2 h-4 w-4" /> New Work Order</Button>
           </div>
         </div>
@@ -113,14 +120,17 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
           {activeTab === "overview" && <CustomerOverview customerId={customer.id} />}
           {activeTab === "activity" && <CustomerActivity customerId={customer.id} />}
           {activeTab === "orders" && <CustomerOrders customerId={customer.id} />}
+          {activeTab === "payments" && <CustomerStatements customerId={customer.id} mode="payments" />}
+          {activeTab === "ledger" && <CustomerStatements customerId={customer.id} mode="ledger" />}
           {activeTab === "statements" && <CustomerStatements customerId={customer.id} />}
           {/* Implement other tabs as needed */}
-          {["payments", "ledger", "settings"].includes(activeTab) && (
+          {["settings"].includes(activeTab) && (
             <div className="py-12 text-center text-muted-foreground border rounded-xl border-dashed">
               This module will be implemented in future phases.
             </div>
           )}
         </div>
+        <CustomerForm open={editOpen} onOpenChange={setEditOpen} onSuccess={loadCustomer} customer={customer} redirectOnCreate={false} />
       </div>
     
   );

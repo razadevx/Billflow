@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRequestContext } from "@/server/core/context";
 import { PaymentService } from "@/domain/payments/services/PaymentService";
 import { createPaymentSchema } from "@/domain/payments/validations/PaymentSchema";
+import { db } from "@/server/db";
 
 export async function POST(req: NextRequest) {
   const ctx = await getRequestContext();
@@ -38,7 +39,20 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await new PaymentService(ctx).listPayments(ctx);
+    const customerId = req.nextUrl.searchParams.get("customerId");
+    if (customerId) {
+      const payments = await db.payment.findMany({
+        where: { companyId: ctx.companyId, customerId, deletedAt: null },
+        include: {
+          workOrder: { select: { orderNumber: true, title: true } },
+        },
+        orderBy: { paymentDate: "desc" },
+      });
+
+      return NextResponse.json(payments);
+    }
+
+    const result = await new PaymentService(ctx).listPayments();
     
     if (result.isFailure()) {
       return NextResponse.json({ error: result.error.message }, { status: 400 });

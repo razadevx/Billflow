@@ -1,14 +1,44 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { DataTable } from "@/components/shared/DataTable";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import Link from "next/link";
 
 export function CustomerOrders({ customerId }: { customerId: string }) {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/v1/workorders?customerId=${customerId}`)
+      .then((res) => res.json())
+      .then((orders) => setData(Array.isArray(orders) ? orders : []))
+      .finally(() => setLoading(false));
+  }, [customerId]);
+
   const columns = [
-    { header: "Order #", accessorKey: "orderNumber" },
-    { header: "Date", accessorKey: "date" },
-    { header: "Amount", accessorKey: "amount" },
+    {
+      header: "Order #",
+      accessorKey: "orderNumber",
+      cell: (info: any) => (
+        <Link className="font-medium hover:underline" href={`/workorders/${info.row.original.id}`}>
+          {info.getValue()}
+        </Link>
+      )
+    },
+    { header: "Title", accessorKey: "title" },
+    {
+      header: "Date",
+      accessorKey: "createdAt",
+      cell: (info: any) => new Date(info.getValue()).toLocaleDateString()
+    },
+    {
+      header: "Amount",
+      accessorKey: "total",
+      cell: (info: any) => currency.format(Number(info.getValue() || 0))
+    },
     { 
       header: "Status", 
       accessorKey: "status",
@@ -16,14 +46,9 @@ export function CustomerOrders({ customerId }: { customerId: string }) {
     }
   ];
 
-  const data = [
-    { orderNumber: "WO-001", date: "10/12/2023", amount: ".00", status: "COMPLETED" },
-    { orderNumber: "WO-002", date: "11/05/2023", amount: ".00", status: "PENDING" },
-  ];
-
   return (
     <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
-      <DataTable data={data} columns={columns} />
+      <DataTable data={data} columns={columns} loading={loading} />
     </div>
   );
 }

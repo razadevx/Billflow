@@ -1,44 +1,77 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { CreateCustomerInput } from "@/domain/customer/validation/CustomerValidation";
 
+type CustomerFormData = {
+  id?: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  creditLimit?: number | null;
+  preferredContact?: string | null;
+  status?: string | null;
+};
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  customer?: CustomerFormData | null;
+  redirectOnCreate?: boolean;
 }
 
-export function CustomerForm({ open, onOpenChange, onSuccess }: Props) {
+const initialFormData: Partial<CreateCustomerInput> = {
+  name: "",
+  email: "",
+  phone: "",
+  address: "",
+  creditLimit: 0,
+  preferredContact: "PHONE",
+};
+
+export function CustomerForm({ open, onOpenChange, onSuccess, customer, redirectOnCreate = true }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<Partial<CreateCustomerInput>>({
-    name: "", email: "", phone: "", address: "", creditLimit: 0, preferredContact: "PHONE"
-  });
+  const [formData, setFormData] = useState<Partial<CreateCustomerInput>>(initialFormData);
+  const isEditing = Boolean(customer?.id);
+
+  useEffect(() => {
+    if (!open) return;
+
+    setFormData(customer ? {
+      name: customer.name || "",
+      email: customer.email || "",
+      phone: customer.phone || "",
+      address: customer.address || "",
+      creditLimit: customer.creditLimit || 0,
+      preferredContact: (customer.preferredContact as CreateCustomerInput["preferredContact"]) || "PHONE",
+    } : initialFormData);
+  }, [customer, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/customers", {
-        method: "POST",
+      const res = await fetch(isEditing ? `/api/customers/${customer?.id}` : "/api/customers", {
+        method: isEditing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
       });
       const data = await res.json();
       
       if (res.ok) {
-        toast.success("Customer created successfully!");
+        toast.success(isEditing ? "Customer updated successfully!" : "Customer created successfully!");
         onOpenChange(false);
         if (onSuccess) onSuccess();
-        // Redirect to new customer profile
-        if (data.data?.id) router.push(`/customers/${data.data.id}`);
+        if (!isEditing && redirectOnCreate && data.data?.id) router.push(`/customers/${data.data.id}`);
       } else {
-        toast.error(data.error?.message || "Failed to create customer");
+        toast.error(data.error?.message || `Failed to ${isEditing ? "update" : "create"} customer`);
       }
     } catch (error) {
       toast.error("An error occurred");
@@ -53,7 +86,7 @@ export function CustomerForm({ open, onOpenChange, onSuccess }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-background text-foreground w-full max-w-lg border rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-bold">New Customer</h2>
+          <h2 className="text-lg font-bold">{isEditing ? "Edit Customer" : "New Customer"}</h2>
           <button onClick={() => onOpenChange(false)} className="text-muted-foreground hover:text-foreground">
             <Icons.close className="h-5 w-5" />
           </button>
@@ -131,7 +164,7 @@ export function CustomerForm({ open, onOpenChange, onSuccess }: Props) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={loading}>
               {loading ? <Icons.loader className="animate-spin h-4 w-4 mr-2" /> : null}
-              Create Customer
+              {isEditing ? "Save Changes" : "Create Customer"}
             </Button>
           </div>
         </form>

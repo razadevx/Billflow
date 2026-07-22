@@ -16,6 +16,25 @@ export class CustomerRepository extends BaseRepository<
     super(prisma);
   }
 
+  async findManyWithCredit(companyId: string) {
+    return prisma.$queryRaw<Array<Customer & { outstandingBalance: number }>>`
+      SELECT
+        c.*,
+        COALESCE(ledger.balance, 0)::float as "outstandingBalance"
+      FROM "customer" c
+      LEFT JOIN (
+        SELECT
+          "customerId",
+          SUM(amount * CASE WHEN type = 'DEBIT' THEN 1 ELSE -1 END) as balance
+        FROM "khata_entry"
+        WHERE "companyId" = ${companyId}
+        GROUP BY "customerId"
+      ) ledger ON ledger."customerId" = c.id
+      WHERE c."companyId" = ${companyId} AND c."deletedAt" IS NULL
+      ORDER BY c."createdAt" DESC
+    `;
+  }
+
   async findByCode(customerCode: string, context: RequestContext): Promise<Customer | null> {
     return this.delegate.findUnique({
       where: {
@@ -40,10 +59,10 @@ export class CustomerRepository extends BaseRepository<
   async findOutstanding(context: RequestContext): Promise<Customer[]> {
     return prisma.$queryRaw`
       SELECT c.* 
-      FROM "Customer" c
+      FROM "customer" c
       LEFT JOIN (
         SELECT "customerId", SUM(amount * CASE WHEN type = 'DEBIT' THEN 1 ELSE -1 END) as balance
-        FROM "KhataEntry"
+        FROM "khata_entry"
         WHERE "companyId" = ${context.companyId}
         GROUP BY "customerId"
       ) as ledger ON ledger."customerId" = c.id

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const context = await getRequestContext();
     if (!context) return errorResponse("Unauthorized", "UNAUTHORIZED", 401);
     const repo = new CustomerRepository();
-    const customers = await repo.findMany(context.companyId);
+    const customers = await repo.findManyWithCredit(context.companyId);
     
     return successResponse(customers);
   } catch (error) {

@@ -14,7 +14,10 @@ interface Customer {
   name: string;
   email: string | null;
   phone: string | null;
+  address: string | null;
   creditLimit: number;
+  outstandingBalance: number;
+  preferredContact: string | null;
   status: string;
 }
 
@@ -24,15 +27,19 @@ export default function CustomersPage() {
   const [data, setData] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const router = useRouter();
+  const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
   const loadData = () => {
+    setLoading(true);
     fetch("/api/customers")
       .then((res) => res.json())
       .then((json) => {
         setData(json.data || []);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -60,6 +67,21 @@ export default function CustomersPage() {
     { header: "Phone", accessorKey: "phone" },
     { header: "Email", accessorKey: "email" },
     {
+      header: "Credit",
+      accessorKey: "outstandingBalance",
+      cell: (info) => {
+        const balance = Number(info.getValue() || 0);
+        return (
+          <div>
+            <div className={balance > 0 ? "font-semibold text-warning" : "font-semibold text-success"}>
+              {currency.format(balance)}
+            </div>
+            <div className="text-xs text-muted-foreground">Limit {currency.format(info.row.original.creditLimit || 0)}</div>
+          </div>
+        );
+      }
+    },
+    {
       header: "Status",
       accessorKey: "status",
       cell: (info) => {
@@ -75,6 +97,25 @@ export default function CustomersPage() {
         );
       }
     }
+    ,
+    {
+      header: "Actions",
+      id: "actions",
+      cell: (info) => (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setEditingCustomer(info.row.original);
+              setFormOpen(true);
+            }}
+          >
+            <Icons.edit className="h-4 w-4 mr-2" /> Edit
+          </Button>
+        </div>
+      )
+    }
   ];
 
   return (
@@ -85,7 +126,7 @@ export default function CustomersPage() {
             <h1 className="text-[length:var(--text-heading-l)] font-bold tracking-tight">Customers</h1>
             <p className="text-muted-foreground">Manage your CRM, view credit history and risk profiles.</p>
           </div>
-          <Button onClick={() => setFormOpen(true)}>
+          <Button onClick={() => { setEditingCustomer(null); setFormOpen(true); }}>
             <Icons.add className="mr-2 h-4 w-4" /> New Customer
           </Button>
         </div>
@@ -103,7 +144,16 @@ export default function CustomersPage() {
           )}
         </div>
       </div>
-      <CustomerForm open={formOpen} onOpenChange={setFormOpen} onSuccess={loadData} />
+      <CustomerForm
+        open={formOpen}
+        onOpenChange={(open) => {
+          setFormOpen(open);
+          if (!open) setEditingCustomer(null);
+        }}
+        onSuccess={loadData}
+        customer={editingCustomer}
+        redirectOnCreate={false}
+      />
     </>
   );
 }
