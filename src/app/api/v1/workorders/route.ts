@@ -40,10 +40,12 @@ export async function POST(req: Request) {
     const result = await service.createWorkOrder( body);
     
     if (result.isFailure()) {
+      console.error("WORKORDER CREATE FAILED:", result.error);
       return NextResponse.json({ error: result.error?.message }, { status: 400 });
     }
     return NextResponse.json(result.value, { status: 201 });
   } catch (err: any) {
+    console.error("WORKORDER POST EXCEPTION:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

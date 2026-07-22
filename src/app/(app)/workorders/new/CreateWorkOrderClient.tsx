@@ -105,7 +105,7 @@ export default function CreateWorkOrderClient() {
         const item = inventory.find((i: any) => i.id === value);
         if (item) {
           updated.description = item.name;
-          updated.unitPrice = item.sellingPrice || 0;
+          updated.unitPrice = item.unitPrice || 0;
         }
       }
 
@@ -120,6 +120,12 @@ export default function CreateWorkOrderClient() {
   const handleSave = () => {
     if (!customerId || !title) {
       toast.error("Customer and Title are required.");
+      return;
+    }
+
+    const invalidItems = lineItems.filter(li => !li.description.trim());
+    if (invalidItems.length > 0) {
+      toast.error("All line items must have a description.");
       return;
     }
 

@@ -20,7 +20,8 @@ export class WorkOrderService extends BaseService {
   async createWorkOrder(dto: CreateWorkOrderDTO) {
     const validationResult = CreateWorkOrderSchema.safeParse(dto);
     if (!validationResult.success) {
-      return fail(new Error(`Validation failed: ${validationResult.error.message}`));
+      const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      return fail(new Error(`Validation failed: ${errors}`));
     }
 
     return TransactionManager.run(async (tx) => {
@@ -99,7 +100,10 @@ export class WorkOrderService extends BaseService {
 
   async editWorkOrder(id: string, dto: UpdateWorkOrderDTO) {
     const validationResult = UpdateWorkOrderSchema.safeParse(dto);
-    if (!validationResult.success) return fail(new Error("Validation failed"));
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      return fail(new Error(`Validation failed: ${errors}`));
+    }
 
     return TransactionManager.run(async (tx) => {
       const repo = new WorkOrderRepository(tx);
@@ -227,7 +231,10 @@ export class WorkOrderService extends BaseService {
 
   async assignWorkOrder(id: string, dto: AssignWorkOrderDTO) {
     const validationResult = AssignWorkOrderSchema.safeParse(dto);
-    if (!validationResult.success) return fail(new Error("Validation failed"));
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      return fail(new Error(`Validation failed: ${errors}`));
+    }
 
     return TransactionManager.run(async (tx) => {
       const repo = new WorkOrderRepository(tx);
