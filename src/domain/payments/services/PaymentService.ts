@@ -51,6 +51,23 @@ export class PaymentService extends BaseService {
           throw new Error(ledgerResult.error?.message || "Failed to record ledger credit");
         }
 
+        if (payment.invoiceId) {
+          const invoice = await tx.invoice.findUnique({
+            where: { id: payment.invoiceId, companyId: this.ctx.companyId },
+          });
+
+          if (invoice) {
+            const balanceDue = Math.max(0, invoice.balanceDue - payment.amount);
+            await tx.invoice.update({
+              where: { id: invoice.id, companyId: this.ctx.companyId },
+              data: {
+                balanceDue,
+                status: balanceDue === 0 ? "PAID" : "PARTIALLY_PAID",
+              },
+            });
+          }
+        }
+
         eventBus.publish({
           type: DomainEvents.PAYMENT_RECORDED,
           payload: { paymentId: payment.id, amount: payment.amount, customerId: payment.customerId },
@@ -96,6 +113,23 @@ export class PaymentService extends BaseService {
           throw new Error(ledgerResult.error?.message || "Failed to record ledger debit for voided payment");
         }
 
+        if (updated.invoiceId) {
+          const invoice = await tx.invoice.findUnique({
+            where: { id: updated.invoiceId, companyId: this.ctx.companyId },
+          });
+
+          if (invoice) {
+            const balanceDue = Math.min(invoice.total, invoice.balanceDue + updated.amount);
+            await tx.invoice.update({
+              where: { id: invoice.id, companyId: this.ctx.companyId },
+              data: {
+                balanceDue,
+                status: balanceDue >= invoice.total ? "ISSUED" : "PARTIALLY_PAID",
+              },
+            });
+          }
+        }
+
         eventBus.publish({
           type: DomainEvents.PAYMENT_VOIDED,
           payload: { paymentId: updated.id, amount: updated.amount, customerId: updated.customerId },
@@ -130,4 +164,3 @@ export class PaymentService extends BaseService {
     }
   }
 }
-

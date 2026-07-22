@@ -6,6 +6,39 @@ import { Label } from "@/components/ui/label";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+const initialFormData = {
+  name: "",
+  sku: "",
+  description: "",
+  unit: "pcs",
+  unitPrice: 0,
+  reorderLevel: 0,
+  initialStock: 0,
+};
+
+const materialPresets = [
+  {
+    label: "Flex Banner",
+    description: "Outdoor flex material sold by square foot.",
+    values: { name: "Flex", unit: "sqft", description: "Flex banner material", sku: "FLEX" },
+  },
+  {
+    label: "Vinyl",
+    description: "Vinyl media sold by square foot.",
+    values: { name: "Vinyl", unit: "sqft", description: "Vinyl printing media", sku: "VINYL" },
+  },
+  {
+    label: "Sticker",
+    description: "Sticker sheet or roll material.",
+    values: { name: "Sticker", unit: "sqft", description: "Sticker printing material", sku: "STICKER" },
+  },
+  {
+    label: "Board",
+    description: "Rigid board sold by piece.",
+    values: { name: "Board", unit: "pcs", description: "Board material", sku: "BOARD" },
+  },
+];
+
 export default function CreateInventoryDialog({ 
   open, 
   onOpenChange,
@@ -15,15 +48,7 @@ export default function CreateInventoryDialog({
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
 }) {
-  const [formData, setFormData] = useState({
-    name: "",
-    sku: "",
-    description: "",
-    unit: "pcs",
-    unitPrice: 0,
-    reorderLevel: 0,
-    initialStock: 0,
-  });
+  const [formData, setFormData] = useState(initialFormData);
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
@@ -39,9 +64,7 @@ export default function CreateInventoryDialog({
       toast.success("Inventory item created");
       onSuccess();
       onOpenChange(false);
-      setFormData({
-        name: "", sku: "", description: "", unit: "pcs", unitPrice: 0, reorderLevel: 0, initialStock: 0
-      });
+      setFormData(initialFormData);
     },
     onError: (error) => {
       toast.error(error.message);
@@ -65,6 +88,28 @@ export default function CreateInventoryDialog({
           <DialogTitle>Add Inventory Item</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Quick presets</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {materialPresets.map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => setFormData({
+                    ...formData,
+                    ...preset.values,
+                    unitPrice: formData.unitPrice,
+                    initialStock: formData.initialStock,
+                    reorderLevel: formData.reorderLevel,
+                  })}
+                  className="rounded-lg border bg-muted/30 px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+                >
+                  <span className="font-medium">{preset.label}</span>
+                  <span className="block text-xs text-muted-foreground">{preset.description}</span>
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
             <Input 
@@ -100,11 +145,16 @@ export default function CreateInventoryDialog({
                 <option value="ml" />
                 <option value="m" />
                 <option value="ft" />
+                <option value="sqft" />
+                <option value="sqyd" />
                 <option value="box" />
                 <option value="pack" />
                 <option value="set" />
                 <option value="roll" />
               </datalist>
+              <p className="text-xs text-muted-foreground">
+                Use <span className="font-mono">sqft</span> for flex, vinyl, stickers, or any square-foot material.
+              </p>
             </div>
           </div>
           <div className="space-y-2">
@@ -125,6 +175,7 @@ export default function CreateInventoryDialog({
                 value={formData.initialStock} 
                 onChange={e => setFormData({...formData, initialStock: Number(e.target.value)})} 
               />
+              <p className="text-xs text-muted-foreground">{formData.unit}</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="reorderLevel">Reorder Lvl</Label>
@@ -145,6 +196,7 @@ export default function CreateInventoryDialog({
                 value={formData.unitPrice} 
                 onChange={e => setFormData({...formData, unitPrice: Number(e.target.value)})} 
               />
+              <p className="text-xs text-muted-foreground">Per {formData.unit}</p>
             </div>
           </div>
           <DialogFooter>

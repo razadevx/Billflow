@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -17,14 +18,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export default function ReceivePaymentClient() {
+export default function ReceivePaymentClient({
+  initialCustomerId = "",
+  initialInvoiceId = "",
+  initialWorkOrderId = "",
+  initialAmount = "",
+}: {
+  initialCustomerId?: string;
+  initialInvoiceId?: string;
+  initialWorkOrderId?: string;
+  initialAmount?: string;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
-    customerId: "",
-    amount: "",
+    customerId: initialCustomerId,
+    invoiceId: initialInvoiceId,
+    workOrderId: initialWorkOrderId,
+    amount: initialAmount,
     method: "CASH",
     referenceNumber: "",
     notes: ""
@@ -33,13 +46,14 @@ export default function ReceivePaymentClient() {
   useEffect(() => {
     fetch(`/api/v1/customers`)
       .then(res => res.json())
-      .then(data => setCustomers(data.items || []));
+      .then(data => setCustomers(Array.isArray(data) ? data : data.data || data.items || []))
+      .catch(() => toast.error("Failed to load customers"));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.customerId || !formData.amount) {
-      alert("Please fill in required fields");
+      toast.error("Please fill in required fields");
       return;
     }
 
@@ -50,6 +64,8 @@ export default function ReceivePaymentClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerId: formData.customerId,
+          invoiceId: formData.invoiceId || undefined,
+          workOrderId: formData.workOrderId || undefined,
           amount: parseFloat(formData.amount),
           method: formData.method,
           referenceNumber: formData.referenceNumber || undefined,
@@ -62,11 +78,11 @@ export default function ReceivePaymentClient() {
         router.push("/payments");
       } else {
         const err = await res.json();
-        alert(err.error || "Failed to save payment");
+        toast.error(err.error || "Failed to save payment");
       }
     } catch (err) {
       console.error(err);
-      alert("An error occurred while saving the payment.");
+      toast.error("An error occurred while saving the payment.");
     } finally {
       setLoading(false);
     }
@@ -85,6 +101,11 @@ export default function ReceivePaymentClient() {
         <form onSubmit={handleSubmit}>
           <CardHeader>
             <CardTitle>Payment Details</CardTitle>
+            {(formData.invoiceId || formData.workOrderId) && (
+              <p className="text-sm text-muted-foreground">
+                Linked to {formData.invoiceId ? "invoice" : "work order"} from the previous screen.
+              </p>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2">
@@ -131,7 +152,7 @@ export default function ReceivePaymentClient() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="CASH">Cash</SelectItem>
-                    <SelectItem value="CARD">Card</SelectItem>
+                    <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
                     <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
                     <SelectItem value="CHEQUE">Cheque</SelectItem>
                     <SelectItem value="UPI">UPI / Wallet</SelectItem>

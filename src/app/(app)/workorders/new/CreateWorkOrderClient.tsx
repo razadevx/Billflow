@@ -108,8 +108,16 @@ export default function CreateWorkOrderClient({ initialCustomerId = "" }: { init
       if (field === "inventoryItemId" && value !== "custom") {
         const item = inventory.find((i: any) => i.id === value);
         if (item) {
+          const unit = String(item.unit || "").toLowerCase();
+          const isSquareFootMaterial = ["sqft", "sq ft", "ft2"].includes(unit);
           updated.description = item.name;
           updated.unitPrice = item.unitPrice || 0;
+          updated.isSqFt = isSquareFootMaterial;
+          updated.rate = isSquareFootMaterial ? item.unitPrice || 0 : updated.rate;
+          if (isSquareFootMaterial) {
+            updated.width = updated.width || 1;
+            updated.height = updated.height || 1;
+          }
         }
       }
 

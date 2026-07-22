@@ -44,7 +44,9 @@ export async function GET(req: NextRequest) {
       const payments = await db.payment.findMany({
         where: { companyId: ctx.companyId, customerId, deletedAt: null },
         include: {
+          customer: { select: { name: true, customerCode: true } },
           workOrder: { select: { orderNumber: true, title: true } },
+          invoice: { select: { invoiceNumber: true } },
         },
         orderBy: { paymentDate: "desc" },
       });
@@ -52,13 +54,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(payments);
     }
 
-    const result = await new PaymentService(ctx).listPayments();
+    const payments = await db.payment.findMany({
+      where: { companyId: ctx.companyId, deletedAt: null },
+      include: {
+        customer: { select: { name: true, customerCode: true } },
+        workOrder: { select: { orderNumber: true, title: true } },
+        invoice: { select: { invoiceNumber: true } },
+      },
+      orderBy: { paymentDate: "desc" },
+    });
     
-    if (result.isFailure()) {
-      return NextResponse.json({ error: result.error.message }, { status: 400 });
-    }
-
-    return NextResponse.json(result.value);
+    return NextResponse.json(payments);
   } catch (error: any) {
     return NextResponse.json({ error: "Internal Server Error", details: error.message }, { status: 500 });
   }

@@ -19,9 +19,10 @@ export default function PaymentListClient() {
     fetch(`/api/v1/payments`)
       .then(res => res.json())
       .then(data => {
-        setPayments(data);
+        setPayments(Array.isArray(data) ? data : []);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   };
 
   const handleVoid = async (id: string) => {
@@ -53,6 +54,9 @@ export default function PaymentListClient() {
           <Link href="/payments/new" className={buttonVariants({ variant: "default" })}>
             <Plus className="mr-2 h-4 w-4" /> Receive Payment
           </Link>
+          <Link href="/khata" className={buttonVariants({ variant: "outline" })}>
+            View Ledger
+          </Link>
         </div>
       </div>
 
@@ -78,8 +82,15 @@ export default function PaymentListClient() {
                         Receipt: {payment.receiptNumber || 'N/A'}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {new Date(payment.paymentDate).toLocaleDateString()} &middot; {payment.method}
+                      {payment.customer?.name || "Unknown Customer"} &middot; {new Date(payment.paymentDate).toLocaleDateString()} &middot; {payment.method}
                       </p>
+                      {(payment.invoice?.invoiceNumber || payment.workOrder?.orderNumber) && (
+                        <p className="text-xs text-muted-foreground">
+                          {payment.invoice?.invoiceNumber ? `Invoice ${payment.invoice.invoiceNumber}` : ""}
+                          {payment.invoice?.invoiceNumber && payment.workOrder?.orderNumber ? " · " : ""}
+                          {payment.workOrder?.orderNumber ? `WO ${payment.workOrder.orderNumber}` : ""}
+                        </p>
+                      )}
                       {payment.referenceNumber && (
                         <p className="text-xs text-muted-foreground">Ref: {payment.referenceNumber}</p>
                       )}
@@ -97,6 +108,9 @@ export default function PaymentListClient() {
                         Void
                       </Button>
                     )}
+                    <Link href={`/customers/${payment.customerId}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
+                      Customer
+                    </Link>
                   </div>
                 </div>
               ))

@@ -7,6 +7,7 @@ import { InvoiceRepository } from "./invoice.repository";
 import { CreateInvoiceFromWorkOrderDTO, UpdateInvoiceStatusDTO } from "./invoice.types";
 import { CreateInvoiceFromWorkOrderSchema, UpdateInvoiceStatusSchema } from "./invoice.validation";
 import { WorkOrderRepository } from "@/domain/workorder/workorder.repository";
+import { LedgerFacade } from "@/domain/ledger/public";
 
 export class InvoiceService extends BaseService {
   constructor(ctx: RequestContext) {
@@ -66,6 +67,17 @@ export class InvoiceService extends BaseService {
         notes: dto.notes,
         terms: dto.terms,
       });
+
+      const ledgerResult = await LedgerFacade.recordDebit(this.ctx, tx, {
+        customerId: wo.customerId,
+        invoiceId: invoice.id,
+        amount: invoice.total,
+        description: `Invoice ${invoice.invoiceNumber} generated from work order ${wo.orderNumber}`,
+      });
+
+      if (ledgerResult.isFailure()) {
+        throw new Error(ledgerResult.error?.message || "Failed to record invoice in ledger");
+      }
 
       return success(invoice);
     });

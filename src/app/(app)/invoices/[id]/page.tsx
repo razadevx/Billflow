@@ -96,9 +96,17 @@ export default function InvoiceDetailPage() {
               Mark as Issued
             </Button>
           )}
-          {invoice.status === "ISSUED" && (
-            <Button variant="outline" onClick={() => handleUpdateStatus("PAID")}>
-              Mark as Paid
+          {invoice.status !== "PAID" && invoice.status !== "CANCELLED" && (
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/payments/new?customerId=${invoice.customerId}&invoiceId=${invoice.id}&amount=${invoice.balanceDue || invoice.total}`)}
+            >
+              Receive Payment
+            </Button>
+          )}
+          {invoice.workOrderId && (
+            <Button variant="outline" onClick={() => router.push(`/workorders/${invoice.workOrderId}`)}>
+              Work Order
             </Button>
           )}
           <Button variant="secondary" onClick={handlePrint}>

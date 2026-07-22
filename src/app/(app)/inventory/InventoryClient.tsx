@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Filter, AlertTriangle } from "lucide-react";
+import { Plus, Search, Filter, AlertTriangle, Package, Ruler } from "lucide-react";
 import Link from "next/link";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -45,9 +45,27 @@ export default function InventoryClient() {
   };
 
   const inventoryItems = data?.data || [];
+  const squareFootItems = inventoryItems.filter((item: any) => ["sqft", "sq ft", "ft2"].includes(String(item.unit).toLowerCase()));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <div className="rounded-2xl border bg-card p-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="rounded-xl bg-primary/10 p-3 text-primary">
+            <Package className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="font-semibold">Manage materials for printing jobs</h2>
+            <p className="text-sm text-muted-foreground">
+              Add flex, vinyl, boards, ink, and stock. Square-foot materials use unit <span className="font-mono">sqft</span>.
+            </p>
+          </div>
+        </div>
+        <Button onClick={() => setIsCreateOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" /> Add Flex / Item
+        </Button>
+      </div>
+
       {/* Analytics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border bg-card text-card-foreground shadow">
@@ -80,11 +98,11 @@ export default function InventoryClient() {
         </div>
         <div className="rounded-xl border bg-card text-card-foreground shadow">
           <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-            <h3 className="tracking-tight text-sm font-medium">Valuation (Current View)</h3>
+            <h3 className="tracking-tight text-sm font-medium">SqFt Materials</h3>
           </div>
           <div className="p-6 pt-0">
-            <div className="text-2xl font-bold">
-              ${inventoryItems.reduce((acc: number, item: any) => acc + (item.currentStock * (item.unitPrice || 0)), 0).toFixed(2)}
+            <div className="text-2xl font-bold flex items-center gap-2">
+              <Ruler className="h-5 w-5 text-primary" /> {squareFootItems.length}
             </div>
           </div>
         </div>
@@ -152,6 +170,11 @@ export default function InventoryClient() {
                     <div className="flex flex-col">
                       <span>{item.name}</span>
                       <span className="text-xs text-muted-foreground">{item.description}</span>
+                      {["sqft", "sq ft", "ft2"].includes(String(item.unit).toLowerCase()) && (
+                        <span className="mt-1 w-fit rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary">
+                          Square-foot pricing
+                        </span>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>{item.sku || "-"}</TableCell>
@@ -166,7 +189,7 @@ export default function InventoryClient() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">${(item.unitPrice || 0).toFixed(2)}</TableCell>
+                  <TableCell className="text-right">${(item.unitPrice || 0).toFixed(2)} / {item.unit}</TableCell>
                   <TableCell className="text-right">${((item.unitPrice || 0) * item.currentStock).toFixed(2)}</TableCell>
                   <TableCell>{getStatusBadge(item.status)}</TableCell>
                   <TableCell className="text-right">

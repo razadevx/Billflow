@@ -68,7 +68,7 @@ export default function InvoicesPage() {
       id: "actions",
       cell: ({ row }: any) => {
         return (
-          <Button variant="ghost" size="sm" onClick={() => router.push(/invoices/ + row.original.id)}>
+          <Button variant="ghost" size="sm" onClick={() => router.push(`/invoices/${row.original.id}`)}>
             View
           </Button>
         );

@@ -73,7 +73,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
             <MetricCard 
               title="Revenue"
-              value=".00"
+              value={`$${(data?.kpis.totalRevenue || 0).toFixed(2)}`}
               icon={Icons.dollar}
               accentColor="success"
               trend={0}
@@ -83,7 +83,7 @@ export default function DashboardPage() {
             />
             <MetricCard 
               title="Outstanding Balance"
-              value=".00"
+              value={`$${(data?.kpis.outstandingBalance || 0).toFixed(2)}`}
               icon={Icons.wallet}
               accentColor="danger"
               className="animate-slide-up"
