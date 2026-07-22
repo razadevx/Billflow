@@ -6,6 +6,7 @@ import { Icons } from "@/components/ui/icons";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { CreateCustomerInput } from "@/domain/customer/validation/CustomerValidation";
+import { useQueryClient } from "@tanstack/react-query";
 
 type CustomerFormData = {
   id?: string;
@@ -37,6 +38,7 @@ const initialFormData: Partial<CreateCustomerInput> = {
 
 export function CustomerForm({ open, onOpenChange, onSuccess, customer, redirectOnCreate = true }: Props) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<CreateCustomerInput>>(initialFormData);
   const isEditing = Boolean(customer?.id);
@@ -66,6 +68,8 @@ export function CustomerForm({ open, onOpenChange, onSuccess, customer, redirect
       const data = await res.json();
       
       if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ["customers"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
         toast.success(isEditing ? "Customer updated successfully!" : "Customer created successfully!");
         onOpenChange(false);
         if (onSuccess) onSuccess();

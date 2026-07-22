@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DataTable } from "@/components/shared/DataTable";
 import { ColumnDef } from "@tanstack/react-table";
@@ -25,26 +26,18 @@ interface Customer {
 import { CustomerForm } from "./components/CustomerForm";
 
 export default function CustomersPage() {
-  const [data, setData] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data = [], isLoading: loading, refetch: loadData } = useQuery({
+    queryKey: ["customers"],
+    queryFn: async () => {
+      const res = await fetch("/api/customers");
+      if (!res.ok) throw new Error("Failed to fetch customers");
+      return res.json().then(json => json.data || []);
+    }
+  });
+
   const [formOpen, setFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const router = useRouter();
-
-  const loadData = () => {
-    setLoading(true);
-    fetch("/api/customers")
-      .then((res) => res.json())
-      .then((json) => {
-        setData(json.data || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const columns: ColumnDef<Customer>[] = [
     {
