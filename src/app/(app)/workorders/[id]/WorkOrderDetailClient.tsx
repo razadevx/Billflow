@@ -47,7 +47,9 @@ export default function WorkOrderDetailClient({ idPromise }: { idPromise: Promis
       toast.success("Status updated");
       queryClient.invalidateQueries({ queryKey: ["workorder", id] });
       queryClient.invalidateQueries({ queryKey: ["workorders"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "workorders"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "activity"] });
     },
     onError: (err: any) => toast.error(err.message)
   });
@@ -88,7 +90,9 @@ export default function WorkOrderDetailClient({ idPromise }: { idPromise: Promis
       toast.success("Invoice generated");
       queryClient.invalidateQueries({ queryKey: ["workorder", id] });
       queryClient.invalidateQueries({ queryKey: ["workorders"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "workorders"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "activity"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       router.push(`/invoices/${data.id}`);
     },

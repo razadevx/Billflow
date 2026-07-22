@@ -74,7 +74,9 @@ export default function CreateWorkOrderClient({ initialCustomerId = "" }: { init
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["workorders"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "workorders"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "activity"] });
       toast.success("Work order created!");
       router.push(`/workorders/${data.id}`);
     },

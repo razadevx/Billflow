@@ -32,7 +32,8 @@ export default function PaymentListClient() {
       if (res.ok) {
         queryClient.invalidateQueries({ queryKey: ["payments"] });
         queryClient.invalidateQueries({ queryKey: ["ledger"] });
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard", "activity"] });
       } else {
         const error = await res.json();
         alert(error.error || "Failed to void payment");

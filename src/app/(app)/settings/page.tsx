@@ -17,7 +17,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Trash, Link as LinkIcon, Building2, Settings2, Users as UsersIcon, Mail, Hash, Printer, Info, ImagePlus, UploadCloud, X } from "lucide-react";
+import { Icons } from "@/components/ui/icons";
 import { format, isValid } from "date-fns";
+import { authClient } from "@/lib/auth-client";
 
 const safeFormatDate = (dateString: string | null | undefined, formatStr: string) => {
   if (!dateString) return "N/A";
@@ -92,6 +94,12 @@ export default function SettingsPage() {
   const [editUserEmail, setEditUserEmail] = useState("");
 
   const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  // My Profile
+  const [session, setSession] = useState<any>(null);
+  const [profileName, setProfileName] = useState("");
+  const [profileImage, setProfileImage] = useState("");
+  const [uploadingProfilePic, setUploadingProfilePic] = useState(false);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -178,8 +186,51 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const tab = new URLSearchParams(window.location.search).get("tab");
-    if (tab) setActiveTab(tab === "profile" ? "users" : tab);
+    if (tab) setActiveTab(tab);
+    
+    authClient.getSession().then((res: any) => {
+      const user = res?.data?.user || res?.user;
+      if (user) {
+        setSession(user);
+        setProfileName(user.name || "");
+        setProfileImage(user.image || "");
+      }
+    });
   }, []);
+
+  const saveProfile = async () => {
+    setSaving(true);
+    try {
+      const res = await authClient.updateUser({ name: profileName, image: profileImage });
+      if (res.error) throw new Error(res.error.message || "Failed to update profile");
+      toast.success("Profile updated successfully. Please refresh the page to see changes globally.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update profile");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) return toast.error("File size must be less than 2MB");
+
+    setUploadingProfilePic(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/v1/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setProfileImage(data.url);
+      toast.success("Profile picture uploaded");
+    } catch (err: any) {
+      toast.error("Failed to upload picture");
+    } finally {
+      setUploadingProfilePic(false);
+    }
+  };
 
   const saveCompany = async () => {
     setSaving(true);
@@ -350,7 +401,8 @@ export default function SettingsPage() {
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-7 mb-8 h-12">
+        <TabsList className="grid w-full grid-cols-8 mb-8 h-12">
+          <TabsTrigger value="profile"><UsersIcon className="w-4 h-4 mr-2 hidden sm:block" /> My Profile</TabsTrigger>
           <TabsTrigger value="company"><Building2 className="w-4 h-4 mr-2 hidden sm:block" /> Company</TabsTrigger>
           <TabsTrigger value="business"><Settings2 className="w-4 h-4 mr-2 hidden sm:block" /> Business</TabsTrigger>
           <TabsTrigger value="users"><UsersIcon className="w-4 h-4 mr-2 hidden sm:block" /> Users</TabsTrigger>
@@ -359,6 +411,50 @@ export default function SettingsPage() {
           <TabsTrigger value="printing"><Printer className="w-4 h-4 mr-2 hidden sm:block" /> Printing</TabsTrigger>
           <TabsTrigger value="about"><Info className="w-4 h-4 mr-2 hidden sm:block" /> About</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="profile" className="space-y-6">
+          <Card className="shadow-sm border border-border">
+            <CardHeader>
+              <CardTitle>My Profile</CardTitle>
+              <CardDescription>Update your personal details and profile picture.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 max-w-xl">
+              <div className="flex items-center space-x-6">
+                <div className="relative">
+                  {profileImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={profileImage} alt="Profile" className="h-24 w-24 rounded-full object-cover border" />
+                  ) : (
+                    <div className="h-24 w-24 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl font-semibold">
+                      {profileName ? profileName.substring(0, 2).toUpperCase() : "US"}
+                    </div>
+                  )}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="absolute bottom-0 right-0 h-8 w-8 rounded-full shadow-sm"
+                    onClick={() => document.getElementById("profile-upload")?.click()}
+                    disabled={uploadingProfilePic}
+                  >
+                    {uploadingProfilePic ? <Icons.loader className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
+                  </Button>
+                  <input id="profile-upload" type="file" accept="image/*" className="hidden" onChange={handleProfileImageUpload} />
+                </div>
+                <div className="space-y-1 flex-1">
+                  <Label>Full Name</Label>
+                  <Input value={profileName} onChange={(e) => setProfileName(e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Email Address</Label>
+                <Input value={session?.email || ""} disabled className="bg-muted" />
+                <p className="text-xs text-muted-foreground">Email cannot be changed directly.</p>
+              </div>
+              <Button onClick={saveProfile} disabled={saving || uploadingProfilePic}>Save Profile Changes</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="company">
           <Card className="max-w-2xl shadow-sm border border-border">

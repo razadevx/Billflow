@@ -69,7 +69,8 @@ export function CustomerForm({ open, onOpenChange, onSuccess, customer, redirect
       
       if (res.ok) {
         queryClient.invalidateQueries({ queryKey: ["customers"] });
-        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard", "kpis"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard", "activity"] });
         toast.success(isEditing ? "Customer updated successfully!" : "Customer created successfully!");
         onOpenChange(false);
         if (onSuccess) onSuccess();

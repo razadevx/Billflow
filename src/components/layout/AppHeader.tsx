@@ -26,8 +26,8 @@ export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const { setTheme, resolvedTheme } = useTheme();
-  const [session, setSession] = useState<{ user: { name?: string | null; email?: string | null } }>({
-    user: { name: "User Profile", email: "user@billflow.com" },
+  const [session, setSession] = useState<{ user: { name?: string | null; email?: string | null; image?: string | null } }>({
+    user: { name: "User Profile", email: "user@billflow.com", image: null },
   });
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -114,7 +114,7 @@ export function AppHeader() {
           <kbd className="ml-4 font-mono text-[10px] bg-background px-1.5 rounded border border-border">Ctrl K</kbd>
         </button>
         
-        <DropdownMenu open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+        <DropdownMenu>
           <DropdownMenuTrigger className="relative rounded-lg p-2 text-muted-foreground outline-none hover:bg-muted hover:text-foreground">
             <Icons.notification className="h-5 w-5" />
             {notificationCount > 0 && (
@@ -138,10 +138,7 @@ export function AppHeader() {
             ) : notifications.map((notification) => (
               <DropdownMenuItem
                 key={notification.id}
-                onClick={() => {
-                  setNotificationsOpen(false);
-                  router.push(notification.href);
-                }}
+                onClick={() => router.push(notification.href)}
                 className="items-start gap-3 py-3"
               >
                 <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${notification.tone === "danger" ? "bg-destructive" : "bg-warning"}`} />
@@ -175,9 +172,13 @@ export function AppHeader() {
         {session ? (
           <DropdownMenu>
             <DropdownMenuTrigger className="outline-none">
-              <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-                {getInitials(session.user.name || session.user.email || "US")}
-              </div>
+              {session.user.image ? (
+                <img src={session.user.image} alt="Profile" className="h-8 w-8 rounded-full object-cover border border-border cursor-pointer" />
+              ) : (
+                <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors cursor-pointer">
+                  {getInitials(session.user.name || session.user.email || "US")}
+                </div>
+              )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
