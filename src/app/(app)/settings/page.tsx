@@ -15,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Trash, Link as LinkIcon, Building2, Settings2, Users as UsersIcon, Mail, Hash, Printer, Info } from "lucide-react";
+import { Trash, Link as LinkIcon, Building2, Settings2, Users as UsersIcon, Mail, Hash, Printer, Info, ImagePlus, UploadCloud, X } from "lucide-react";
 import { format, isValid } from "date-fns";
 
 const safeFormatDate = (dateString: string | null | undefined, formatStr: string) => {
@@ -57,6 +57,58 @@ export default function SettingsPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editUserName, setEditUserName] = useState("");
   const [editUserEmail, setEditUserEmail] = useState("");
+
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("File size must be less than 2MB");
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      const res = await fetch("/api/v1/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      
+      setSGeneral(prev => ({ ...prev, COMPANY_LOGO: data.url }));
+      toast.success("Logo uploaded successfully");
+      
+      // Auto-save the setting immediately to make it smoother
+      await fetch("/api/v1/administration/settings", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "COMPANY_LOGO", value: data.url })
+      });
+    } catch (err: any) {
+      toast.error("Failed to upload logo");
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const removeLogo = async () => {
+    setSGeneral(prev => ({ ...prev, COMPANY_LOGO: "" }));
+    try {
+      await fetch("/api/v1/administration/settings", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "COMPANY_LOGO", value: "" })
+      });
+      toast.success("Logo removed");
+    } catch (err) {
+      toast.error("Failed to remove logo");
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -345,9 +397,36 @@ export default function SettingsPage() {
                 <CardTitle>General Settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Company Logo URL</Label>
-                  <Input value={sGeneral.COMPANY_LOGO} onChange={e => setSGeneral({...sGeneral, COMPANY_LOGO: e.target.value})} placeholder="https://..." />
+                <div className="space-y-4">
+                  <Label>Company Logo</Label>
+                  {sGeneral.COMPANY_LOGO ? (
+                    <div className="relative inline-block border rounded-xl overflow-hidden bg-white/50 p-4 w-full max-w-sm flex flex-col items-center justify-center min-h-[160px]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={sGeneral.COMPANY_LOGO} alt="Company Logo" className="max-h-32 object-contain" />
+                      <div className="absolute top-2 right-2 flex space-x-2">
+                        <Button type="button" variant="secondary" size="icon" className="h-8 w-8 rounded-full shadow-sm" onClick={() => document.getElementById('logo-upload')?.click()}>
+                          <UploadCloud className="h-4 w-4" />
+                        </Button>
+                        <Button type="button" variant="danger" size="icon" className="h-8 w-8 rounded-full shadow-sm" onClick={removeLogo}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <input id="logo-upload" type="file" accept="image/png, image/jpeg, image/svg+xml" className="hidden" onChange={handleLogoUpload} disabled={uploadingLogo} />
+                    </div>
+                  ) : (
+                    <div 
+                      className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center max-w-sm transition-colors ${uploadingLogo ? 'bg-muted opacity-50' : 'hover:bg-muted/50 border-muted-foreground/25 cursor-pointer'}`}
+                      onClick={() => !uploadingLogo && document.getElementById('logo-upload-empty')?.click()}
+                    >
+                      <ImagePlus className="h-10 w-10 text-muted-foreground mb-4" />
+                      <h3 className="font-semibold text-sm">Upload Logo</h3>
+                      <p className="text-xs text-muted-foreground mt-1 mb-4">PNG, JPG or SVG • Max 2MB</p>
+                      <input id="logo-upload-empty" type="file" accept="image/png, image/jpeg, image/svg+xml" className="hidden" onChange={handleLogoUpload} disabled={uploadingLogo} />
+                      <Button type="button" variant="outline" size="sm" disabled={uploadingLogo}>
+                        {uploadingLogo ? "Uploading..." : "Select File"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Time Zone</Label>
