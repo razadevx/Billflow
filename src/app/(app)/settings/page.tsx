@@ -14,8 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Copy, Trash, Link as LinkIcon, Building2, Settings2, Users as UsersIcon, Mail, Hash, Printer, Info } from "lucide-react";
-import { format } from "date-fns";
+import { Trash, Link as LinkIcon, Building2, Settings2, Users as UsersIcon, Mail, Hash, Printer, Info } from "lucide-react";
+import { format, isValid } from "date-fns";
+
+const safeFormatDate = (dateString: string | null | undefined, formatStr: string) => {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  return isValid(date) ? format(date, formatStr) : "Invalid Date";
+};
 
 type User = { id: string; name: string; email: string; role: string; createdAt: string };
 type Setting = { id: string; key: string; value: string };
@@ -60,19 +66,19 @@ export default function SettingsPage() {
       if (!companyRes.ok) throw new Error("Failed to load administration data");
 
       const [usersData, settingsData, companyData, seqData, invData] = await Promise.all([
-        usersRes.ok ? usersRes.json() : [],
-        settingsRes.ok ? settingsRes.json() : [],
-        companyRes.ok ? companyRes.json() : null,
-        sequencesRes.ok ? sequencesRes.json() : [],
-        invitesRes.ok ? invitesRes.json() : []
+        usersRes.ok ? usersRes.json().catch(() => []) : [],
+        settingsRes.ok ? settingsRes.json().catch(() => []) : [],
+        companyRes.ok ? companyRes.json().catch(() => null) : null,
+        sequencesRes.ok ? sequencesRes.json().catch(() => []) : [],
+        invitesRes.ok ? invitesRes.json().catch(() => []) : []
       ]);
 
-      setUsers(usersData);
-      setSettings(settingsData);
+      setUsers(Array.isArray(usersData) ? usersData : []);
+      setSettings(Array.isArray(settingsData) ? settingsData : []);
       setCompany(companyData);
-      setCompanyForm(companyData);
-      setSequences(seqData);
-      setInvitations(invData);
+      setCompanyForm(companyData || {});
+      setSequences(Array.isArray(seqData) ? seqData : []);
+      setInvitations(Array.isArray(invData) ? invData : []);
 
       // Parse settings
       const getS = (k: string, d: string) => settingsData.find((s: Setting) => s.key === k)?.value ?? d;
@@ -431,7 +437,7 @@ export default function SettingsPage() {
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell>{user.email}</TableCell>
-                        <TableCell className="text-muted-foreground">{format(new Date(user.createdAt), "MMM d, yyyy")}</TableCell>
+                        <TableCell className="text-muted-foreground">{safeFormatDate(user.createdAt, "MMM d, yyyy")}</TableCell>
                         <TableCell>
                           <Select value={user.role} onValueChange={(v) => updateUserRole(user.id, v ?? "STAFF")}>
                             <SelectTrigger className="w-[120px] h-8 text-xs">
@@ -505,14 +511,16 @@ export default function SettingsPage() {
                     <TableBody>
                       {invitations.map(inv => {
                         const link = `${window.location.origin}/auth/invite/${inv.token}`;
-                        const isExpired = new Date(inv.expiresAt) < new Date();
+                        const invDate = new Date(inv.expiresAt);
+                        const isExpired = isValid(invDate) && invDate < new Date();
                         return (
                           <TableRow key={inv.id}>
                             <TableCell className="font-medium">{inv.email}</TableCell>
                             <TableCell><Badge variant="secondary">{inv.role}</Badge></TableCell>
-                            <TableCell className={isExpired ? "text-red-500" : ""}>
-                              {format(new Date(inv.expiresAt), "MMM d, yyyy")}
+                            <TableCell>
+                              {isExpired ? <Badge variant="destructive">Expired</Badge> : <Badge variant="outline">Pending</Badge>}
                             </TableCell>
+                            <TableCell className="text-muted-foreground">{safeFormatDate(inv.expiresAt, "MMM d, yyyy")}</TableCell>
                             <TableCell>
                               <Button variant="ghost" size="sm" onClick={() => {
                                 navigator.clipboard.writeText(link);
