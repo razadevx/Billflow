@@ -48,7 +48,12 @@ export class DashboardService {
       }
 
       const activeWorkOrders = await prisma.workOrder.count({
-        where: { companyId, status: { in: ["PENDING", "IN_PROGRESS"] } }
+        where: { 
+          companyId, 
+          status: { in: ["PENDING", "IN_PROGRESS"] },
+          deletedAt: null,
+          customer: { deletedAt: null }
+        }
       });
 
       const lowStockItemsCount = await prisma.inventoryItem.count({
@@ -82,7 +87,12 @@ export class DashboardService {
       tomorrow.setDate(tomorrow.getDate() + 1);
 
       const todayWorkOrders = await prisma.workOrder.findMany({
-        where: { companyId, createdAt: { gte: today, lt: tomorrow } },
+        where: { 
+          companyId, 
+          createdAt: { gte: today, lt: tomorrow },
+          deletedAt: null,
+          customer: { deletedAt: null }
+        },
         include: { customer: { select: { name: true } } },
         take: 5,
         orderBy: { createdAt: "desc" }
@@ -96,7 +106,11 @@ export class DashboardService {
   async getRecentPayments(companyId: string) {
     try {
       const recentPayments = await prisma.payment.findMany({
-        where: { companyId },
+        where: { 
+          companyId,
+          deletedAt: null,
+          customer: { deletedAt: null }
+        },
         include: { customer: { select: { name: true } } },
         take: 5,
         orderBy: { paymentDate: "desc" }

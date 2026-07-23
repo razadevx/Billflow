@@ -130,12 +130,27 @@ export class CustomerService extends BaseService {
   async archiveCustomer(id: string): Promise<Result<Customer, Error>> {
     return await TransactionManager.run(async (tx) => {
       try {
+        const now = new Date();
         const result = await tx.customer.update({
           where: { id, companyId: this.ctx.companyId },
           data: {
             status: "ARCHIVED",
-            deletedAt: new Date() // Soft delete
+            deletedAt: now // Soft delete
           }
+        });
+
+        // Soft delete all work orders, invoices, and payments associated with this customer
+        await tx.workOrder.updateMany({
+          where: { customerId: id, companyId: this.ctx.companyId, deletedAt: null },
+          data: { deletedAt: now }
+        });
+        await tx.invoice.updateMany({
+          where: { customerId: id, companyId: this.ctx.companyId, deletedAt: null },
+          data: { deletedAt: now }
+        });
+        await tx.payment.updateMany({
+          where: { customerId: id, companyId: this.ctx.companyId, deletedAt: null },
+          data: { deletedAt: now }
         });
 
         await eventBus.publish({ 

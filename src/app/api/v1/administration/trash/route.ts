@@ -4,6 +4,45 @@ import { db } from "@/server/db";
 
 export const dynamic = "force-dynamic";
 
+async function permanentlyDeleteWorkOrder(companyId: string, workOrderId: string) {
+  await db.lineItem.deleteMany({ where: { workOrderId } });
+  await db.workOrderNote.deleteMany({ where: { workOrderId } });
+  await db.workOrderAttachment.deleteMany({ where: { workOrderId } });
+  await db.dailySchedule.deleteMany({ where: { workOrderId } });
+  await db.payment.updateMany({ where: { workOrderId, companyId }, data: { workOrderId: null } });
+  await db.invoice.updateMany({ where: { workOrderId, companyId }, data: { workOrderId: null } });
+  await db.workOrder.delete({ where: { id: workOrderId, companyId } });
+}
+
+async function permanentlyDeleteCustomer(companyId: string, customerId: string) {
+  // 1. Delete Khata entries
+  await db.khataEntry.deleteMany({ where: { customerId, companyId } });
+
+  // 2. Delete payments and history
+  const payments = await db.payment.findMany({ where: { customerId, companyId }, select: { id: true } });
+  const paymentIds = payments.map(p => p.id);
+  if (paymentIds.length > 0) {
+    await db.paymentHistory.deleteMany({ where: { paymentId: { in: paymentIds } } });
+    await db.payment.deleteMany({ where: { id: { in: paymentIds } } });
+  }
+
+  // 3. Delete work orders and child items
+  const workOrders = await db.workOrder.findMany({ where: { customerId, companyId }, select: { id: true } });
+  for (const wo of workOrders) {
+    await permanentlyDeleteWorkOrder(companyId, wo.id);
+  }
+
+  // 4. Delete invoices
+  await db.invoice.deleteMany({ where: { customerId, companyId } });
+
+  // 5. Delete notes & tags
+  await db.customerNote.deleteMany({ where: { customerId, companyId } });
+  await db.customerTag.deleteMany({ where: { customerId } });
+
+  // 6. Delete Customer
+  await db.customer.delete({ where: { id: customerId, companyId } });
+}
+
 export async function GET(request: NextRequest) {
   try {
     const ctx = await getRequestContext();
@@ -58,6 +97,19 @@ export async function POST(request: NextRequest) {
         where: { id: entityId, companyId: ctx.companyId },
         data: { deletedAt: null, status: "ACTIVE" },
       });
+      // Restore customer's work orders, invoices, payments
+      await db.workOrder.updateMany({
+        where: { customerId: entityId, companyId: ctx.companyId },
+        data: { deletedAt: null },
+      });
+      await db.invoice.updateMany({
+        where: { customerId: entityId, companyId: ctx.companyId },
+        data: { deletedAt: null },
+      });
+      await db.payment.updateMany({
+        where: { customerId: entityId, companyId: ctx.companyId },
+        data: { deletedAt: null },
+      });
     } else if (entityType === "WorkOrder") {
       await db.workOrder.update({
         where: { id: entityId, companyId: ctx.companyId },
@@ -95,14 +147,35 @@ export async function DELETE(request: NextRequest) {
     const entityId = searchParams.get("entityId");
 
     if (emptyAll) {
-      // Empty entire trash permanently
-      await Promise.all([
-        db.customer.deleteMany({ where: { companyId: ctx.companyId, deletedAt: { not: null } } }),
-        db.workOrder.deleteMany({ where: { companyId: ctx.companyId, deletedAt: { not: null } } }),
-        db.inventoryItem.deleteMany({ where: { companyId: ctx.companyId, deletedAt: { not: null } } }),
-        db.invoice.deleteMany({ where: { companyId: ctx.companyId, deletedAt: { not: null } } }),
-      ]);
-      return NextResponse.json({ success: true, message: "Trash emptied permanently" });
+      // 1. Permanently delete all trashed customers
+      const trashedCustomers = await db.customer.findMany({
+        where: { companyId: ctx.companyId, deletedAt: { not: null } },
+        select: { id: true }
+      });
+      for (const c of trashedCustomers) {
+        await permanentlyDeleteCustomer(ctx.companyId, c.id);
+      }
+
+      // 2. Permanently delete remaining trashed work orders
+      const trashedWorkOrders = await db.workOrder.findMany({
+        where: { companyId: ctx.companyId, deletedAt: { not: null } },
+        select: { id: true }
+      });
+      for (const wo of trashedWorkOrders) {
+        await permanentlyDeleteWorkOrder(ctx.companyId, wo.id);
+      }
+
+      // 3. Permanently delete trashed inventory items
+      await db.inventoryItem.deleteMany({
+        where: { companyId: ctx.companyId, deletedAt: { not: null } }
+      });
+
+      // 4. Permanently delete remaining trashed invoices
+      await db.invoice.deleteMany({
+        where: { companyId: ctx.companyId, deletedAt: { not: null } }
+      });
+
+      return NextResponse.json({ success: true, message: "Trash emptied permanently from Supabase database" });
     }
 
     if (!entityType || !entityId) {
@@ -110,9 +183,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (entityType === "Customer") {
-      await db.customer.delete({ where: { id: entityId, companyId: ctx.companyId } });
+      await permanentlyDeleteCustomer(ctx.companyId, entityId);
     } else if (entityType === "WorkOrder") {
-      await db.workOrder.delete({ where: { id: entityId, companyId: ctx.companyId } });
+      await permanentlyDeleteWorkOrder(ctx.companyId, entityId);
     } else if (entityType === "InventoryItem") {
       await db.inventoryItem.delete({ where: { id: entityId, companyId: ctx.companyId } });
     } else if (entityType === "Invoice") {
@@ -121,7 +194,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Invalid entityType" }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, message: `${entityType} permanently deleted from database` });
+    return NextResponse.json({ success: true, message: `${entityType} permanently deleted from Supabase database` });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

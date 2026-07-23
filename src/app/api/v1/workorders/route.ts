@@ -15,6 +15,8 @@ export async function GET(request: NextRequest) {
     const workOrders = await db.workOrder.findMany({
       where: {
         companyId: ctx.companyId,
+        deletedAt: null,
+        customer: { deletedAt: null },
         ...(customerId ? { customerId } : {}),
         ...(status && status !== 'ALL' ? { status } : {}),
       },

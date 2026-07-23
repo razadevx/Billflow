@@ -76,7 +76,10 @@ export class KhataRepository extends BaseRepository<
   async getTotalOutstanding(companyId: string): Promise<number> {
     const aggregate = await this.prisma.khataEntry.groupBy({
       by: ['type'],
-      where: { companyId },
+      where: { 
+        companyId,
+        customer: { deletedAt: null }
+      },
       _sum: { amount: true }
     });
 

@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
     }
 
     const payments = await db.payment.findMany({
-      where: { companyId: ctx.companyId, deletedAt: null },
+      where: { companyId: ctx.companyId, deletedAt: null, customer: { deletedAt: null } },
       include: {
         customer: { select: { name: true, customerCode: true } },
         workOrder: { select: { orderNumber: true, title: true } },
