@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Filter, AlertTriangle, Package, Ruler } from "lucide-react";
+import { Plus, Search, Filter, AlertTriangle, Package, Ruler, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
+import { notifyDataChanged } from "@/lib/realtime-sync";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +36,20 @@ export default function InventoryClient() {
       if (!res.ok) throw new Error("Failed to fetch inventory");
       return res.json();
     },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/v1/inventory/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to move item to trash");
+      return res.json();
+    },
+    onSuccess: () => {
+      notifyDataChanged("inventory");
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      toast.success("Inventory item moved to trash");
+    },
+    onError: (err: any) => toast.error(err.message)
   });
 
   const getStatusBadge = (status: string) => {
@@ -199,12 +215,27 @@ export default function InventoryClient() {
                   <TableCell className="text-right">{formatCurrency((item.unitPrice || 0) * item.currentStock)}</TableCell>
                   <TableCell>{getStatusBadge(item.status)}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => setAdjustItem(item)}>
-                      Adjust
-                    </Button>
-                    <Link href={`/inventory/${item.id}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
-                      View
-                    </Link>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => setAdjustItem(item)}>
+                        Adjust
+                      </Button>
+                      <Link href={`/inventory/${item.id}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
+                        View
+                      </Link>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-red-400 hover:text-red-500 hover:bg-red-500/10"
+                        onClick={() => {
+                          if (confirm(`Move "${item.name}" to trash? You can restore it anytime from Settings -> Trash.`)) {
+                            deleteMutation.mutate(item.id);
+                          }
+                        }}
+                        title="Move to trash"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

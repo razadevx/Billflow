@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Trash, Link as LinkIcon, Building2, Settings2, Users as UsersIcon, Mail, Hash, Printer, Info, ImagePlus, UploadCloud, X } from "lucide-react";
+import { Trash, Link as LinkIcon, Building2, Settings2, Users as UsersIcon, Mail, Hash, Printer, Info, ImagePlus, UploadCloud, X, Trash2, RotateCcw, AlertTriangle } from "lucide-react";
 import { Icons } from "@/components/ui/icons";
 import { format, isValid } from "date-fns";
 import { authClient } from "@/lib/auth-client";
@@ -101,6 +101,64 @@ export default function SettingsPage() {
   const [profileName, setProfileName] = useState("");
   const [profileImage, setProfileImage] = useState("");
   const [uploadingProfilePic, setUploadingProfilePic] = useState(false);
+
+  const { data: trashData, refetch: refetchTrash } = useQuery({
+    queryKey: ["trash"],
+    queryFn: async () => {
+      const res = await fetch("/api/v1/administration/trash");
+      if (!res.ok) throw new Error("Failed to load trash");
+      return res.json();
+    }
+  });
+
+  const handleRestoreItem = async (entityType: string, entityId: string) => {
+    try {
+      const res = await fetch("/api/v1/administration/trash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entityType, entityId })
+      });
+      if (!res.ok) throw new Error("Failed to restore item");
+      toast.success(`${entityType} restored successfully`);
+      refetchTrash();
+      queryClient.invalidateQueries();
+      notifyDataChanged("workorder");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handlePermanentDelete = async (entityType: string, entityId: string) => {
+    if (!confirm(`Are you sure you want to PERMANENTLY delete this ${entityType}? It will be vanished permanently from the database!`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/v1/administration/trash?entityType=${entityType}&entityId=${entityId}`, {
+        method: "DELETE"
+      });
+      if (!res.ok) throw new Error("Failed to delete permanently");
+      toast.success(`${entityType} permanently vanished from database`);
+      refetchTrash();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleEmptyTrash = async () => {
+    if (!confirm("CRITICAL WARNING: Are you sure you want to EMPTY ALL TRASH? All soft-deleted records will be permanently vanished from Supabase database!")) {
+      return;
+    }
+    try {
+      const res = await fetch("/api/v1/administration/trash?emptyAll=true", {
+        method: "DELETE"
+      });
+      if (!res.ok) throw new Error("Failed to empty trash");
+      toast.success("All trashed data permanently vanished");
+      refetchTrash();
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -417,6 +475,7 @@ export default function SettingsPage() {
           <TabsTrigger value="invitations" className="flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm whitespace-nowrap"><Mail className="w-4 h-4" /> Invitations</TabsTrigger>
           <TabsTrigger value="numbering" className="flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm whitespace-nowrap"><Hash className="w-4 h-4" /> Numbering</TabsTrigger>
           <TabsTrigger value="printing" className="flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm whitespace-nowrap"><Printer className="w-4 h-4" /> Printing</TabsTrigger>
+          <TabsTrigger value="trash" className="flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm whitespace-nowrap text-red-400 font-medium"><Trash2 className="w-4 h-4" /> Trash / Recycle Bin</TabsTrigger>
           <TabsTrigger value="about" className="flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm whitespace-nowrap"><Info className="w-4 h-4" /> About</TabsTrigger>
         </TabsList>
 
@@ -875,6 +934,228 @@ export default function SettingsPage() {
                 <Textarea value={sPrinting.PRINT_FOOTER} onChange={e => setSPrinting({...sPrinting, PRINT_FOOTER: e.target.value})} rows={2} />
               </div>
               <Button onClick={() => saveSettingsGroup(sPrinting)} disabled={saving} className="w-full">Save Printing Settings</Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="trash" className="space-y-6">
+          <Card className="shadow-lg border border-border/60 bg-card/60 backdrop-blur-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/40">
+              <div>
+                <CardTitle className="text-xl font-bold flex items-center gap-2 text-red-400">
+                  <Trash2 className="h-5 w-5" /> Trash & Recycle Bin
+                </CardTitle>
+                <CardDescription>
+                  Temporarily deleted items are stored here. Restoring an item returns it to active modules. Deleting permanently vanishes data from Supabase.
+                </CardDescription>
+              </div>
+              <Button 
+                variant="danger" 
+                size="sm"
+                onClick={handleEmptyTrash}
+                disabled={
+                  !trashData || 
+                  (trashData.customers?.length === 0 && 
+                   trashData.workOrders?.length === 0 && 
+                   trashData.inventory?.length === 0 && 
+                   trashData.invoices?.length === 0)
+                }
+                className="text-xs flex items-center gap-1.5 shadow-md shadow-red-600/20"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Empty Trash Permanently
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div className="p-4 rounded-xl bg-background/50 border border-border/40 space-y-1">
+                  <span className="text-xs text-muted-foreground font-medium">Customers Trashed</span>
+                  <p className="text-2xl font-bold font-mono text-red-400">{trashData?.customers?.length || 0}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-background/50 border border-border/40 space-y-1">
+                  <span className="text-xs text-muted-foreground font-medium">Work Orders Trashed</span>
+                  <p className="text-2xl font-bold font-mono text-amber-400">{trashData?.workOrders?.length || 0}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-background/50 border border-border/40 space-y-1">
+                  <span className="text-xs text-muted-foreground font-medium">Inventory Items Trashed</span>
+                  <p className="text-2xl font-bold font-mono text-blue-400">{trashData?.inventory?.length || 0}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-background/50 border border-border/40 space-y-1">
+                  <span className="text-xs text-muted-foreground font-medium">Invoices Trashed</span>
+                  <p className="text-2xl font-bold font-mono text-purple-400">{trashData?.invoices?.length || 0}</p>
+                </div>
+              </div>
+
+              {/* Trashed Items Table */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Temporarily Deleted Records</h4>
+                
+                {(!trashData || (
+                  trashData.customers?.length === 0 && 
+                  trashData.workOrders?.length === 0 && 
+                  trashData.inventory?.length === 0 && 
+                  trashData.invoices?.length === 0
+                )) ? (
+                  <div className="p-12 text-center border border-dashed rounded-xl text-muted-foreground text-sm space-y-1">
+                    <Trash2 className="h-8 w-8 mx-auto opacity-40 mb-2 text-muted-foreground" />
+                    <p className="font-semibold text-foreground">Recycle bin is empty</p>
+                    <p className="text-xs text-muted-foreground">No temporarily deleted items found in database.</p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-border/60 overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/40">
+                          <TableHead>Record Type</TableHead>
+                          <TableHead>Name / Title</TableHead>
+                          <TableHead>Deleted Date</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {/* Customers */}
+                        {trashData.customers?.map((item: any) => (
+                          <TableRow key={item.id} className="hover:bg-muted/30">
+                            <TableCell>
+                              <Badge variant="outline" className="bg-red-500/10 text-red-400 border-red-500/30">Customer</Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {item.name} {item.customerCode ? `(${item.customerCode})` : ""}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground font-mono">
+                              {new Date(item.deletedAt || item.updatedAt).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleRestoreItem("Customer", item.id)}
+                                  className="text-xs h-8 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5 mr-1" /> Restore
+                                </Button>
+                                <Button 
+                                  variant="danger" 
+                                  size="sm"
+                                  onClick={() => handlePermanentDelete("Customer", item.id)}
+                                  className="text-xs h-8 shadow-sm shadow-red-600/20"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete Permanently
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+
+                        {/* Work Orders */}
+                        {trashData.workOrders?.map((item: any) => (
+                          <TableRow key={item.id} className="hover:bg-muted/30">
+                            <TableCell>
+                              <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30">Work Order</Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {item.title} <span className="text-xs text-muted-foreground font-mono">({item.orderNumber})</span>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground font-mono">
+                              {new Date(item.deletedAt || item.updatedAt).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleRestoreItem("WorkOrder", item.id)}
+                                  className="text-xs h-8 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5 mr-1" /> Restore
+                                </Button>
+                                <Button 
+                                  variant="danger" 
+                                  size="sm"
+                                  onClick={() => handlePermanentDelete("WorkOrder", item.id)}
+                                  className="text-xs h-8 shadow-sm shadow-red-600/20"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete Permanently
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+
+                        {/* Inventory Items */}
+                        {trashData.inventory?.map((item: any) => (
+                          <TableRow key={item.id} className="hover:bg-muted/30">
+                            <TableCell>
+                              <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30">Inventory Item</Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {item.name} <span className="text-xs text-muted-foreground font-mono">({item.unit})</span>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground font-mono">
+                              {new Date(item.deletedAt || item.updatedAt).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleRestoreItem("InventoryItem", item.id)}
+                                  className="text-xs h-8 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5 mr-1" /> Restore
+                                </Button>
+                                <Button 
+                                  variant="danger" 
+                                  size="sm"
+                                  onClick={() => handlePermanentDelete("InventoryItem", item.id)}
+                                  className="text-xs h-8 shadow-sm shadow-red-600/20"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete Permanently
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+
+                        {/* Invoices */}
+                        {trashData.invoices?.map((item: any) => (
+                          <TableRow key={item.id} className="hover:bg-muted/30">
+                            <TableCell>
+                              <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/30">Invoice</Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              Invoice #{item.invoiceNumber}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground font-mono">
+                              {new Date(item.deletedAt || item.updatedAt).toLocaleString()}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleRestoreItem("Invoice", item.id)}
+                                  className="text-xs h-8 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5 mr-1" /> Restore
+                                </Button>
+                                <Button 
+                                  variant="danger" 
+                                  size="sm"
+                                  onClick={() => handlePermanentDelete("Invoice", item.id)}
+                                  className="text-xs h-8 shadow-sm shadow-red-600/20"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete Permanently
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

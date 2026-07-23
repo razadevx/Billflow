@@ -4,7 +4,7 @@ import { useState, use } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Printer, AlertTriangle, FileText, CheckCircle, Upload, Paperclip } from "lucide-react";
+import { ArrowLeft, Printer, AlertTriangle, FileText, CheckCircle, Upload, Paperclip, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { notifyDataChanged } from "@/lib/realtime-sync";
@@ -95,6 +95,20 @@ export default function WorkOrderDetailClient({ idPromise }: { idPromise: Promis
     onError: (err: any) => toast.error(err.message)
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/v1/workorders/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete work order");
+      return res.json();
+    },
+    onSuccess: () => {
+      notifyDataChanged("workorder");
+      toast.success("Work order moved to trash");
+      router.push("/workorders");
+    },
+    onError: (err: any) => toast.error(err.message)
+  });
+
   const attachmentMutation = useMutation({
     mutationFn: async () => {
       // Mock upload for Phase 5
@@ -154,6 +168,18 @@ export default function WorkOrderDetailClient({ idPromise }: { idPromise: Promis
         <div className="flex items-center space-x-2">
           <Button variant="outline" onClick={() => router.push(`/workorders/${wo.id}/print`)}>
             <Printer className="mr-2 h-4 w-4" /> Print
+          </Button>
+          <Button 
+            variant="outline" 
+            className="text-red-400 hover:text-red-500 hover:bg-red-500/10 border-red-500/30"
+            onClick={() => {
+              if (confirm("Move this work order to trash? You can restore it anytime from Settings -> Trash.")) {
+                deleteMutation.mutate();
+              }
+            }}
+            disabled={deleteMutation.isPending}
+          >
+            <Trash2 className="mr-2 h-4 w-4" /> Trash
           </Button>
           <Button
             variant="outline"

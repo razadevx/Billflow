@@ -63,3 +63,20 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  try {
+    const ctx = await getRequestContext();
+    if (!ctx) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { id } = await context.params;
+    await db.workOrder.update({
+      where: { id, companyId: ctx.companyId },
+      data: { deletedAt: new Date() }
+    });
+
+    return NextResponse.json({ success: true, message: "Work order moved to trash" });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
