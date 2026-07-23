@@ -20,6 +20,7 @@ import { Trash, Link as LinkIcon, Building2, Settings2, Users as UsersIcon, Mail
 import { Icons } from "@/components/ui/icons";
 import { format, isValid } from "date-fns";
 import { authClient } from "@/lib/auth-client";
+import { notifyDataChanged } from "@/lib/realtime-sync";
 
 const safeFormatDate = (dateString: string | null | undefined, formatStr: string) => {
   if (!dateString) return "N/A";
@@ -203,7 +204,8 @@ export default function SettingsPage() {
     try {
       const res = await authClient.updateUser({ name: profileName, image: profileImage });
       if (res.error) throw new Error(res.error.message || "Failed to update profile");
-      toast.success("Profile updated successfully. Please refresh the page to see changes globally.");
+      notifyDataChanged("workorder");
+      toast.success("Profile updated successfully!");
     } catch (err: any) {
       toast.error(err.message || "Failed to update profile");
     } finally {
@@ -224,7 +226,11 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setProfileImage(data.url);
-      toast.success("Profile picture uploaded");
+      
+      // Instantly update user profile image in session and global state
+      await authClient.updateUser({ name: profileName || undefined, image: data.url });
+      notifyDataChanged("workorder");
+      toast.success("Profile picture updated!");
     } catch (err: any) {
       toast.error("Failed to upload picture");
     } finally {
@@ -241,6 +247,7 @@ export default function SettingsPage() {
       });
       if (!res.ok) throw new Error(await res.text());
       queryClient.invalidateQueries({ queryKey: ["settings"] });
+      notifyDataChanged("workorder");
       toast.success("Company profile updated");
     } catch (err: any) {
       toast.error("Failed to update company");
@@ -260,6 +267,7 @@ export default function SettingsPage() {
       );
       await Promise.all(promises);
       queryClient.invalidateQueries({ queryKey: ["settings"] });
+      notifyDataChanged("workorder");
       toast.success("Settings saved successfully");
     } catch (err: any) {
       toast.error("Failed to save settings");
@@ -401,31 +409,31 @@ export default function SettingsPage() {
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-8 mb-8 h-12">
-          <TabsTrigger value="profile"><UsersIcon className="w-4 h-4 mr-2 hidden sm:block" /> My Profile</TabsTrigger>
-          <TabsTrigger value="company"><Building2 className="w-4 h-4 mr-2 hidden sm:block" /> Company</TabsTrigger>
-          <TabsTrigger value="business"><Settings2 className="w-4 h-4 mr-2 hidden sm:block" /> Business</TabsTrigger>
-          <TabsTrigger value="users"><UsersIcon className="w-4 h-4 mr-2 hidden sm:block" /> Users</TabsTrigger>
-          <TabsTrigger value="invitations"><Mail className="w-4 h-4 mr-2 hidden sm:block" /> Invitations</TabsTrigger>
-          <TabsTrigger value="numbering"><Hash className="w-4 h-4 mr-2 hidden sm:block" /> Numbering</TabsTrigger>
-          <TabsTrigger value="printing"><Printer className="w-4 h-4 mr-2 hidden sm:block" /> Printing</TabsTrigger>
-          <TabsTrigger value="about"><Info className="w-4 h-4 mr-2 hidden sm:block" /> About</TabsTrigger>
+        <TabsList className="flex items-center gap-1.5 overflow-x-auto p-1.5 bg-muted/60 rounded-xl mb-8 border border-border/40 w-full justify-start scrollbar-none">
+          <TabsTrigger value="profile" className="flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm whitespace-nowrap"><UsersIcon className="w-4 h-4" /> My Profile</TabsTrigger>
+          <TabsTrigger value="company" className="flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm whitespace-nowrap"><Building2 className="w-4 h-4" /> Company</TabsTrigger>
+          <TabsTrigger value="business" className="flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm whitespace-nowrap"><Settings2 className="w-4 h-4" /> Business</TabsTrigger>
+          <TabsTrigger value="users" className="flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm whitespace-nowrap"><UsersIcon className="w-4 h-4" /> Users</TabsTrigger>
+          <TabsTrigger value="invitations" className="flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm whitespace-nowrap"><Mail className="w-4 h-4" /> Invitations</TabsTrigger>
+          <TabsTrigger value="numbering" className="flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm whitespace-nowrap"><Hash className="w-4 h-4" /> Numbering</TabsTrigger>
+          <TabsTrigger value="printing" className="flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm whitespace-nowrap"><Printer className="w-4 h-4" /> Printing</TabsTrigger>
+          <TabsTrigger value="about" className="flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm whitespace-nowrap"><Info className="w-4 h-4" /> About</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6">
-          <Card className="shadow-sm border border-border">
+          <Card className="shadow-lg border border-border/60 max-w-2xl bg-card/60 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle>My Profile</CardTitle>
+              <CardTitle className="text-xl font-bold">My Profile</CardTitle>
               <CardDescription>Update your personal details and profile picture.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6 max-w-xl">
-              <div className="flex items-center space-x-6">
-                <div className="relative">
+            <CardContent className="space-y-6">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 p-5 rounded-xl bg-background/50 border border-border/40">
+                <div className="relative group shrink-0">
                   {profileImage ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={profileImage} alt="Profile" className="h-24 w-24 rounded-full object-cover border" />
+                    <img src={profileImage} alt="Profile" className="h-28 w-28 rounded-full object-cover border-2 border-blue-500/40 shadow-md" />
                   ) : (
-                    <div className="h-24 w-24 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl font-semibold">
+                    <div className="h-28 w-28 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold shadow-md">
                       {profileName ? profileName.substring(0, 2).toUpperCase() : "US"}
                     </div>
                   )}
@@ -433,25 +441,47 @@ export default function SettingsPage() {
                     type="button"
                     variant="secondary"
                     size="icon"
-                    className="absolute bottom-0 right-0 h-8 w-8 rounded-full shadow-sm"
+                    className="absolute bottom-0 right-0 h-9 w-9 rounded-full shadow-lg border border-border/60 bg-background hover:bg-muted"
                     onClick={() => document.getElementById("profile-upload")?.click()}
                     disabled={uploadingProfilePic}
+                    title="Upload profile picture"
                   >
-                    {uploadingProfilePic ? <Icons.loader className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
+                    {uploadingProfilePic ? <Icons.loader className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4 text-blue-400" />}
                   </Button>
                   <input id="profile-upload" type="file" accept="image/*" className="hidden" onChange={handleProfileImageUpload} />
                 </div>
-                <div className="space-y-1 flex-1">
-                  <Label>Full Name</Label>
-                  <Input value={profileName} onChange={(e) => setProfileName(e.target.value)} />
+
+                <div className="flex-1 w-full space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Full Name</Label>
+                    <Input 
+                      value={profileName} 
+                      onChange={(e) => setProfileName(e.target.value)} 
+                      placeholder="Your full name"
+                      className="h-11 bg-background/60 w-full text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Email Address</Label>
+                    <Input 
+                      value={session?.email || ""} 
+                      disabled 
+                      className="h-11 bg-muted/60 text-muted-foreground w-full font-mono text-xs cursor-not-allowed" 
+                    />
+                    <p className="text-xs text-muted-foreground">Email address is managed by your account administrator.</p>
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Email Address</Label>
-                <Input value={session?.email || ""} disabled className="bg-muted" />
-                <p className="text-xs text-muted-foreground">Email cannot be changed directly.</p>
+
+              <div className="flex justify-end pt-2">
+                <Button 
+                  onClick={saveProfile} 
+                  disabled={saving || uploadingProfilePic}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 h-11 shadow-md shadow-blue-600/20"
+                >
+                  {saving ? "Saving Changes..." : "Save Profile Changes"}
+                </Button>
               </div>
-              <Button onClick={saveProfile} disabled={saving || uploadingProfilePic}>Save Profile Changes</Button>
             </CardContent>
           </Card>
         </TabsContent>
