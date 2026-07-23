@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { notifyDataChanged } from "@/lib/realtime-sync";
 
 const initialFormData = {
   name: "",
@@ -57,27 +58,38 @@ export default function CreateInventoryDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error("Failed to create item");
-      return res.json();
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to create item");
+      }
+      return json;
     },
     onSuccess: () => {
-      toast.success("Inventory item created");
+      notifyDataChanged("inventory");
+      toast.success("Inventory item created successfully!");
       onSuccess();
       onOpenChange(false);
       setFormData(initialFormData);
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to create item");
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name.trim()) {
+      toast.error("Please enter item name");
+      return;
+    }
     mutation.mutate({
-      ...formData,
-      unitPrice: Number(formData.unitPrice),
-      reorderLevel: Number(formData.reorderLevel),
-      initialStock: Number(formData.initialStock),
+      name: formData.name.trim(),
+      sku: formData.sku.trim() || undefined,
+      description: formData.description.trim() || undefined,
+      unit: formData.unit.trim() || "pcs",
+      unitPrice: Number(formData.unitPrice) || 0,
+      reorderLevel: Number(formData.reorderLevel) || 0,
+      initialStock: Number(formData.initialStock) || 0,
     });
   };
 

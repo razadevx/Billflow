@@ -45,8 +45,10 @@ export default function InventoryClient() {
     }
   };
 
-  const inventoryItems = data?.data || [];
+  const inventoryItems = Array.isArray(data) ? data : data?.items || data?.data || [];
   const squareFootItems = inventoryItems.filter((item: any) => ["sqft", "sq ft", "ft2"].includes(String(item.unit).toLowerCase()));
+  const totalSqFtAvailable = squareFootItems.reduce((acc: number, item: any) => acc + Number(item.availableQuantity ?? item.currentStock ?? 0), 0);
+  const totalSqFtReserved = squareFootItems.reduce((acc: number, item: any) => acc + Number(item.reservedQuantity ?? 0), 0);
 
   return (
     <div className="space-y-5">
@@ -74,36 +76,36 @@ export default function InventoryClient() {
             <h3 className="tracking-tight text-sm font-medium">Total Items</h3>
           </div>
           <div className="p-6 pt-0">
-            <div className="text-2xl font-bold">{data?.total || 0}</div>
+            <div className="text-2xl font-bold">{data?.total || inventoryItems.length}</div>
           </div>
         </div>
         <div className="rounded-xl border bg-card text-card-foreground shadow">
           <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-            <h3 className="tracking-tight text-sm font-medium">Low Stock</h3>
+            <h3 className="tracking-tight text-sm font-medium">Low / Out of Stock</h3>
           </div>
           <div className="p-6 pt-0">
-            <div className="text-2xl font-bold text-yellow-600">
-              {inventoryItems.filter((i: any) => i.status === 'LOW_STOCK').length}
+            <div className="text-2xl font-bold text-amber-400">
+              {inventoryItems.filter((i: any) => i.status === 'LOW_STOCK' || i.status === 'OUT_OF_STOCK').length}
             </div>
           </div>
         </div>
         <div className="rounded-xl border bg-card text-card-foreground shadow">
           <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-            <h3 className="tracking-tight text-sm font-medium">Out of Stock</h3>
+            <h3 className="tracking-tight text-sm font-medium">SqFt Available Stock</h3>
           </div>
           <div className="p-6 pt-0">
-            <div className="text-2xl font-bold text-red-600">
-              {inventoryItems.filter((i: any) => i.status === 'OUT_OF_STOCK').length}
+            <div className="text-2xl font-bold text-emerald-400 flex items-center gap-1">
+              <Ruler className="h-5 w-5 text-emerald-400" /> {totalSqFtAvailable.toLocaleString()} <span className="text-xs text-muted-foreground font-normal">sqft</span>
             </div>
           </div>
         </div>
         <div className="rounded-xl border bg-card text-card-foreground shadow">
           <div className="p-6 flex flex-row items-center justify-between space-y-0 pb-2">
-            <h3 className="tracking-tight text-sm font-medium">SqFt Materials</h3>
+            <h3 className="tracking-tight text-sm font-medium">SqFt Reserved</h3>
           </div>
           <div className="p-6 pt-0">
-            <div className="text-2xl font-bold flex items-center gap-2">
-              <Ruler className="h-5 w-5 text-primary" /> {squareFootItems.length}
+            <div className="text-2xl font-bold text-amber-400 flex items-center gap-1">
+              <Ruler className="h-5 w-5 text-amber-400" /> {totalSqFtReserved.toLocaleString()} <span className="text-xs text-muted-foreground font-normal">sqft</span>
             </div>
           </div>
         </div>
@@ -181,13 +183,16 @@ export default function InventoryClient() {
                   <TableCell>{item.sku || "-"}</TableCell>
                   <TableCell>{item.category?.name || "Uncategorized"}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex flex-col items-end">
-                      <span>{item.currentStock} {item.unit}</span>
-                      {item.availableQuantity !== item.currentStock && (
-                        <span className="text-xs text-muted-foreground">
-                          {item.availableQuantity} available
+                    <div className="flex flex-col items-end gap-0.5 font-mono">
+                      <span className="font-semibold text-sm">{item.currentStock} {item.unit}</span>
+                      {Number(item.reservedQuantity || 0) > 0 && (
+                        <span className="text-[11px] text-amber-400">
+                          {item.reservedQuantity} {item.unit} reserved
                         </span>
                       )}
+                      <span className="text-[11px] text-emerald-400 font-medium">
+                        {item.availableQuantity ?? item.currentStock} {item.unit} available
+                      </span>
                     </div>
                   </TableCell>
                   <TableCell className="text-right">{formatCurrency(item.unitPrice || 0)} / {item.unit}</TableCell>
