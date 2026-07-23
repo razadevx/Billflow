@@ -139,6 +139,8 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error("Failed to delete permanently");
       toast.success(`${entityType} permanently vanished from database`);
       refetchTrash();
+      queryClient.invalidateQueries();
+      notifyDataChanged("workorder");
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -155,6 +157,8 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error("Failed to empty trash");
       toast.success("All trashed data permanently vanished");
       refetchTrash();
+      queryClient.invalidateQueries();
+      notifyDataChanged("workorder");
     } catch (err: any) {
       toast.error(err.message);
     }

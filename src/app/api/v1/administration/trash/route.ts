@@ -5,6 +5,7 @@ import { db } from "@/server/db";
 export const dynamic = "force-dynamic";
 
 async function permanentlyDeleteWorkOrder(companyId: string, workOrderId: string) {
+  await db.activityLog.deleteMany({ where: { companyId, entityType: "WorkOrder", entityId: workOrderId } });
   await db.lineItem.deleteMany({ where: { workOrderId } });
   await db.workOrderNote.deleteMany({ where: { workOrderId } });
   await db.workOrderAttachment.deleteMany({ where: { workOrderId } });
@@ -15,10 +16,13 @@ async function permanentlyDeleteWorkOrder(companyId: string, workOrderId: string
 }
 
 async function permanentlyDeleteCustomer(companyId: string, customerId: string) {
-  // 1. Delete Khata entries
+  // 1. Delete Activity logs for customer
+  await db.activityLog.deleteMany({ where: { companyId, entityType: "Customer", entityId: customerId } });
+
+  // 2. Delete Khata entries
   await db.khataEntry.deleteMany({ where: { customerId, companyId } });
 
-  // 2. Delete payments and history
+  // 3. Delete payments and history
   const payments = await db.payment.findMany({ where: { customerId, companyId }, select: { id: true } });
   const paymentIds = payments.map(p => p.id);
   if (paymentIds.length > 0) {
@@ -26,20 +30,20 @@ async function permanentlyDeleteCustomer(companyId: string, customerId: string) 
     await db.payment.deleteMany({ where: { id: { in: paymentIds } } });
   }
 
-  // 3. Delete work orders and child items
+  // 4. Delete work orders and child items
   const workOrders = await db.workOrder.findMany({ where: { customerId, companyId }, select: { id: true } });
   for (const wo of workOrders) {
     await permanentlyDeleteWorkOrder(companyId, wo.id);
   }
 
-  // 4. Delete invoices
+  // 5. Delete invoices
   await db.invoice.deleteMany({ where: { customerId, companyId } });
 
-  // 5. Delete notes & tags
+  // 6. Delete notes & tags
   await db.customerNote.deleteMany({ where: { customerId, companyId } });
   await db.customerTag.deleteMany({ where: { customerId } });
 
-  // 6. Delete Customer
+  // 7. Delete Customer
   await db.customer.delete({ where: { id: customerId, companyId } });
 }
 
@@ -175,6 +179,11 @@ export async function DELETE(request: NextRequest) {
         where: { companyId: ctx.companyId, deletedAt: { not: null } }
       });
 
+      // 5. Purge residual activity logs for company
+      await db.activityLog.deleteMany({
+        where: { companyId: ctx.companyId }
+      });
+
       return NextResponse.json({ success: true, message: "Trash emptied permanently from Supabase database" });
     }
 
@@ -187,8 +196,10 @@ export async function DELETE(request: NextRequest) {
     } else if (entityType === "WorkOrder") {
       await permanentlyDeleteWorkOrder(ctx.companyId, entityId);
     } else if (entityType === "InventoryItem") {
+      await db.activityLog.deleteMany({ where: { companyId: ctx.companyId, entityType: "InventoryItem", entityId } });
       await db.inventoryItem.delete({ where: { id: entityId, companyId: ctx.companyId } });
     } else if (entityType === "Invoice") {
+      await db.activityLog.deleteMany({ where: { companyId: ctx.companyId, entityType: "Invoice", entityId } });
       await db.invoice.delete({ where: { id: entityId, companyId: ctx.companyId } });
     } else {
       return NextResponse.json({ error: "Invalid entityType" }, { status: 400 });

@@ -171,13 +171,41 @@ export class DashboardService {
 
   async getActivityFeed(companyId: string) {
     try {
-      const activityFeed = await prisma.activityLog.findMany({
+      const logs = await prisma.activityLog.findMany({
         where: { companyId },
         include: { user: { select: { name: true } } },
-        take: 10,
+        take: 30,
         orderBy: { createdAt: "desc" }
       });
-      return success(activityFeed);
+
+      const filteredLogs = [];
+      for (const log of logs) {
+        if (log.entityType === "WorkOrder") {
+          const wo = await prisma.workOrder.findFirst({
+            where: { id: log.entityId, companyId, deletedAt: null, customer: { deletedAt: null } }
+          });
+          if (!wo) continue;
+        } else if (log.entityType === "Customer") {
+          const cust = await prisma.customer.findFirst({
+            where: { id: log.entityId, companyId, deletedAt: null }
+          });
+          if (!cust) continue;
+        } else if (log.entityType === "Invoice") {
+          const inv = await prisma.invoice.findFirst({
+            where: { id: log.entityId, companyId, deletedAt: null }
+          });
+          if (!inv) continue;
+        } else if (log.entityType === "InventoryItem") {
+          const item = await prisma.inventoryItem.findFirst({
+            where: { id: log.entityId, companyId, deletedAt: null }
+          });
+          if (!item) continue;
+        }
+        filteredLogs.push(log);
+        if (filteredLogs.length >= 10) break;
+      }
+
+      return success(filteredLogs);
     } catch (error) {
       return failure(error instanceof Error ? error : new Error("Failed to fetch activity feed"));
     }
