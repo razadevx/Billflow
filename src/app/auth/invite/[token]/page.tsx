@@ -49,7 +49,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
           name,
           companyId: invitation.companyId,
           role: invitation.role
-        },
+        } as any,
         headers: headersList
       });
       

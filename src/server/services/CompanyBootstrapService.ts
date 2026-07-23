@@ -52,7 +52,7 @@ export class CompanyBootstrapService {
           name: input.userName,
           companyId: company.id,
           role: "OWNER",
-        },
+        } as any,
         headers: reqHeaders,
       });
 

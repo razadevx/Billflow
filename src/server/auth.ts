@@ -8,6 +8,14 @@ export const auth = betterAuth({
     provider: "postgresql", 
   }),
   secret: env.BETTER_AUTH_SECRET,
+  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://billflow.xinrlabs.com",
+  trustedOrigins: [
+    "https://billflow.xinrlabs.com",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    process.env.BETTER_AUTH_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+  ].filter(Boolean) as string[],
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url, token }) => {
