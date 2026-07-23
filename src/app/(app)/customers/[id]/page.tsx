@@ -6,7 +6,10 @@ import { Icons } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { CustomerForm } from "../components/CustomerForm";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { notifyDataChanged } from "@/lib/realtime-sync";
+import { Trash2 } from "lucide-react";
 
 // Future components
 import { CustomerOverview } from "./components/CustomerOverview";
@@ -15,6 +18,9 @@ import { CustomerOrders } from "./components/CustomerOrders";
 import { CustomerStatements } from "./components/CustomerStatements";
 
 export default function CustomerProfilePage({ params }: { params: { id: string } }) {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
   const { data: customer, isLoading: loading } = useQuery({
     queryKey: ["customers", params.id],
     queryFn: async () => {
@@ -24,9 +30,23 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/v1/customers/${params.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete customer");
+      return res.json();
+    },
+    onSuccess: () => {
+      notifyDataChanged("customer");
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      toast.success("Customer moved to trash");
+      router.push("/customers");
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to delete customer")
+  });
+
   const [activeTab, setActiveTab] = useState("overview");
   const [editOpen, setEditOpen] = useState(false);
-  const router = useRouter();
 
   const tabs = [
     { id: "overview", label: "Overview" },
@@ -89,6 +109,18 @@ export default function CustomerProfilePage({ params }: { params: { id: string }
           <div className="flex space-x-3">
             <Button variant="outline"><Icons.phone className="mr-2 h-4 w-4" /> Call</Button>
             <Button variant="outline" onClick={() => setEditOpen(true)}><Icons.edit className="mr-2 h-4 w-4" /> Edit</Button>
+            <Button 
+              variant="outline"
+              className="text-red-400 hover:text-red-500 hover:bg-red-500/10 border-red-500/30"
+              onClick={() => {
+                if (confirm(`Move "${customer.name}" to trash? You can restore it anytime from Settings -> Trash.`)) {
+                  deleteMutation.mutate();
+                }
+              }}
+              disabled={deleteMutation.isPending}
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Trash
+            </Button>
             <Button onClick={() => router.push(`/workorders/new?customerId=${customer.id}`)}><Icons.add className="mr-2 h-4 w-4" /> New Work Order</Button>
           </div>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { DataTable } from "@/components/shared/DataTable";
 import { ColumnDef } from "@tanstack/react-table";
@@ -9,6 +9,9 @@ import { Icons } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
+import { toast } from "sonner";
+import { notifyDataChanged } from "@/lib/realtime-sync";
+import { Trash2 } from "lucide-react";
 
 interface Customer {
   id: string;
@@ -26,6 +29,9 @@ interface Customer {
 import { CustomerForm } from "./components/CustomerForm";
 
 export default function CustomersPage() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
   const { data = [], isLoading: loading, refetch: loadData } = useQuery({
     queryKey: ["customers"],
     queryFn: async () => {
@@ -35,9 +41,23 @@ export default function CustomersPage() {
     }
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/v1/customers/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete customer");
+      return res.json();
+    },
+    onSuccess: () => {
+      notifyDataChanged("customer");
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      toast.success("Customer moved to trash");
+      loadData();
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to delete customer")
+  });
+
   const [formOpen, setFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const router = useRouter();
 
   const columns: ColumnDef<Customer>[] = [
     {
@@ -89,8 +109,7 @@ export default function CustomersPage() {
           </span>
         );
       }
-    }
-    ,
+    },
     {
       header: "Actions",
       id: "actions",
@@ -112,6 +131,20 @@ export default function CustomersPage() {
             }}
           >
             <Icons.edit className="h-4 w-4 mr-2" /> Edit
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-red-400 hover:text-red-500 hover:bg-red-500/10"
+            onClick={() => {
+              if (confirm(`Move "${info.row.original.name}" to trash? You can restore it anytime from Settings -> Trash.`)) {
+                deleteMutation.mutate(info.row.original.id);
+              }
+            }}
+            title="Move to trash"
+            disabled={deleteMutation.isPending}
+          >
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       )
