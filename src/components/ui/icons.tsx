@@ -30,6 +30,7 @@ import {
   Moon,
   Sun,
   User,
+  RefreshCw,
   type LucideIcon
 } from "lucide-react";
 
@@ -69,4 +70,5 @@ export const Icons = {
   moon: Moon,
   sun: Sun,
   user: User,
+  refresh: RefreshCw,
 };

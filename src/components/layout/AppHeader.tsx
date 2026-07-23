@@ -5,6 +5,9 @@ import { Icons } from "../ui/icons";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { authClient } from "../../lib/auth-client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { notifyDataChanged } from "@/lib/realtime-sync";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +28,9 @@ type NotificationItem = {
 export function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { setTheme, resolvedTheme } = useTheme();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [session, setSession] = useState<{ user: { name?: string | null; email?: string | null; image?: string | null } }>({
     user: { name: "User Profile", email: "user@billflow.com", image: null },
   });
@@ -33,6 +38,15 @@ export function AppHeader() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   // Simple Breadcrumb logic based on pathname
   const segments = pathname.split("/").filter(Boolean);
+
+  const handleRefreshData = () => {
+    setIsRefreshing(true);
+    queryClient.invalidateQueries();
+    notifyDataChanged("workorder");
+    router.refresh();
+    toast.success("Refreshed latest data");
+    setTimeout(() => setIsRefreshing(false), 700);
+  };
 
   const getInitials = (name?: string) => {
     if (!name) return "US";
@@ -152,6 +166,15 @@ export function AppHeader() {
             <DropdownMenuItem onClick={() => router.push("/dashboard")}>View dashboard</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <button
+          onClick={handleRefreshData}
+          disabled={isRefreshing}
+          className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200"
+          title="Refresh module data"
+        >
+          <Icons.refresh className={`h-5 w-5 ${isRefreshing ? "animate-spin text-blue-500" : ""}`} />
+        </button>
 
         <button
           onClick={() => setTheme(nextTheme)}
