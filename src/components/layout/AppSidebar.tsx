@@ -39,7 +39,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
-  const [user, setUser] = useState<{ name?: string | null; email?: string | null }>({ name: "User Profile", email: "user@billflow.com" });
+  const [user, setUser] = useState<{ name?: string | null; email?: string | null; image?: string | null }>({ name: "User Profile", email: "user@billflow.com", image: null });
   React.useEffect(() => {
     authClient
       .getSession()
@@ -150,9 +150,14 @@ export function AppSidebar() {
         "p-4 border-t border-sidebar-border transition-all",
         collapsed ? "flex justify-center hover:bg-sidebar-accent" : "flex items-center space-x-3 text-left hover:bg-sidebar-accent"
       )}>
-        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-          <span className="text-primary font-medium text-xs">{initials}</span>
-        </div>
+        {user.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={user.image} alt="Profile" className="h-8 w-8 rounded-full object-cover border border-border/50 shrink-0 shadow-sm" />
+        ) : (
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <span className="text-primary font-medium text-xs">{initials}</span>
+          </div>
+        )}
         {!collapsed && (
           <div className="flex flex-col overflow-hidden">
             <span className="text-sm font-medium truncate">{user.name || "User Profile"}</span>
