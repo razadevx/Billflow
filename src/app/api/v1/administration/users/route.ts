@@ -26,17 +26,14 @@ export async function PUT(request: Request) {
     const service = new AdministrationService(ctx);
     
     const body = await request.json();
-    const { userId, role, name, email } = body;
-    
-    if (!userId) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
-    }
+    const { userId, role, name, email, image } = body;
+    const targetUserId = userId || ctx.userId;
 
     let result;
     if (role && Object.values(Role).includes(role)) {
-      result = await service.updateUserRole(userId, role);
+      result = await service.updateUserRole(targetUserId, role);
     } else {
-      result = await service.updateUserDetails(userId, { name, email });
+      result = await service.updateUserDetails(targetUserId, { name, email, image });
     }
 
     if (result.isSuccess()) {

@@ -93,7 +93,7 @@ export class AdministrationService extends BaseService {
     }
   }
 
-  async updateUserDetails(userId: string, data: { name?: string; email?: string }): Promise<Result<User>> {
+  async updateUserDetails(userId: string, data: { name?: string; email?: string; image?: string }): Promise<Result<User>> {
     this.requirePermission("users:manage");
     try {
       return await TransactionManager.run(async (tx) => {

@@ -30,13 +30,19 @@ export async function POST(request: NextRequest) {
     }
 
     const filepath = path.join(uploadsDir, filename);
-    await writeFile(filepath, buffer);
-
-    const fileUrl = `/uploads/${filename}`;
-
-    return NextResponse.json({ url: fileUrl }, { status: 200 });
+    try {
+      await writeFile(filepath, buffer);
+      const fileUrl = `/uploads/${filename}`;
+      return NextResponse.json({ url: fileUrl }, { status: 200 });
+    } catch (fsError) {
+      console.warn("Filesystem upload failed, falling back to base64 Data URI:", fsError);
+      const mimeType = file.type || "image/png";
+      const base64 = buffer.toString("base64");
+      const dataUrl = `data:${mimeType};base64,${base64}`;
+      return NextResponse.json({ url: dataUrl }, { status: 200 });
+    }
   } catch (error: any) {
     console.error("Upload error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Failed to upload file" }, { status: 500 });
   }
 }

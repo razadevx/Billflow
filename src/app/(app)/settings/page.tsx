@@ -278,23 +278,56 @@ export default function SettingsPage() {
   const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) return toast.error("File size must be less than 2MB");
+    if (file.size > 5 * 1024 * 1024) return toast.error("File size must be less than 5MB");
 
     setUploadingProfilePic(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/v1/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      setProfileImage(data.url);
-      
-      // Instantly update user profile image in session and global state
-      await authClient.updateUser({ name: profileName || undefined, image: data.url });
+      let imageUrl = "";
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch("/api/v1/upload", { method: "POST", body: formData });
+        if (res.ok) {
+          const data = await res.json();
+          imageUrl = data.url;
+        }
+      } catch (uploadErr) {
+        console.warn("Server upload failed, converting image client-side:", uploadErr);
+      }
+
+      if (!imageUrl) {
+        // Client-side fallback: Convert file to Base64 Data URL
+        imageUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      setProfileImage(imageUrl);
+
+      // 1. Sync via administration API directly to PostgreSQL database
+      await fetch("/api/v1/administration/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: imageUrl, name: profileName })
+      });
+
+      // 2. Sync via authClient session
+      try {
+        await authClient.updateUser({ name: profileName || undefined, image: imageUrl });
+      } catch (authErr) {
+        console.warn("authClient.updateUser warning:", authErr);
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
       notifyDataChanged("workorder");
-      toast.success("Profile picture updated!");
+      toast.success("Profile picture updated successfully!");
     } catch (err: any) {
-      toast.error("Failed to upload picture");
+      console.error("Profile picture error:", err);
+      toast.error(err.message || "Failed to upload picture");
     } finally {
       setUploadingProfilePic(false);
     }
